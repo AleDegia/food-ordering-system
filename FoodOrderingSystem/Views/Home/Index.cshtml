@@ -1,0 +1,39 @@
+﻿@model List<FoodItem>
+@{
+    ViewData["Title"] = "Home";
+}
+
+<!-- Hero Section -->
+<div class="hero-section text-center">
+    <div class="container">
+        <h1 class="display-3 mb-4">Delicious Food Delivered To Your Door</h1>
+        <p class="lead mb-4">Order your favorite meals online and enjoy quick delivery</p>
+        <a href="#" class="btn btn-light btn-lg">Order Now <i class="bi bi-arrow-right"></i></a>
+    </div>
+</div>
+
+<!-- Featured Items Section -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">Featured Items</h2>
+    <div class="row">
+        @foreach (var item in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card food-card h-100 shadow">
+                    <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" style="height: 200px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">@item.Name</h5>
+                        <p class="card-text text-muted">@item.Description</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="h5 mb-0 text-primary">$@item.Price</span>
+                            <!-- Quick Add to Cart Link with Query String -->
+                            <a href="/Order/AddToCart?foodItemId=@item.Id" class="btn btn-primary">         <!--va all'OrderController in AddToCart e gli passa foodItemId-->
+                                <i class="bi bi-cart-plus"></i> Add to Cart
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

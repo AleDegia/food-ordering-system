@@ -1,0 +1,44 @@
+﻿@model List<FoodItem>
+@{
+    ViewData["Title"] = "Menu";
+}
+
+<div class="container my-5">
+    <h2 class="text-center mb-4">Our Menu</h2>
+    <!-- Category Filter Bar -->
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <a href="/Menu" class="btn btn-outline-primary me-2">All</a>
+            @foreach (var cat in ViewBag.Categories)
+            {
+                <a href="/Menu?categoryId=@cat.Id" class="btn btn-outline-primary me-2">@cat.Name</a>
+            }
+        </div>
+    </div>
+
+    <!-- Food Items Grid -->
+    <div class="row">
+        @foreach (var item in Model)
+        {
+            <div class="col-md-3 mb-4">
+                <div class="card food-card h-100 shadow">
+                    <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" style="height: 180px; object-fit: cover;">
+                    <div class="card-body">
+                        <span class="badge bg-secondary">@item.Category.Name</span>
+                        <h5 class="card-title mt-2">@item.Name</h5>
+                        <p class="card-text text-muted small">@item.Description</p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="h5 mb-0 text-primary">$@item.Price</span>
+                            <form action="/Order/AddToCart" method="get" class="d-inline">
+                                <input type="hidden" name="foodItemId" value="@item.Id" />
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-cart-plus"></i> Add
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
