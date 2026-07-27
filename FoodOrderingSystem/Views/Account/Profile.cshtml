@@ -78,15 +78,41 @@
 
                         <div class="d-flex justify-content-between">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Save Changes
+                                <i class="bi bi-save"></i> Save Changes 
                             </button>
-
-                            <button type="button" class="btn btn-outline-danger">
+                            <button type="button" class="btn btn-outline-danger" data-bs-target="#deleteModal" data-bs-toggle="modal">
                                 <i class="bi bi-trash"></i> Delete Account
                             </button>
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Delete Account Modal --> 
+<!--id="deleteModal": This ID must match the data-bs-target="#deleteModal" attribute on the trigger button. This is how the browser knows which popup to open.-->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> <strong>Warning!</strong></p>
+                <p>Are you sure you want to delete your account? This action cannot be undone!</p>
+                <p>All your data including order history will be permanently removed.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <!--cerca action DeleteAccount in AccountController perchè questa view è renderizzata da quel controller-->
+                <!--non GET perchè non devo leggere dati, e con POST puoi includere l’anti-forgery token, che protegge da richieste esterne non autorizzate.-->
+                <form asp-action="DeleteAccount" method="post">
+                    <button type="submit" class="btn btn-danger">Yes, Delete My Account</button>
+                </form>
             </div>
         </div>
     </div>

@@ -129,5 +129,33 @@ namespace FoodOrderingSystem.Controllers
 
             return View(model);
         }
+
+        [HttpPost]          
+        public IActionResult DeleteAccount()
+        {
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null) return RedirectToAction("Login");
+
+            var user = _context.Users.Find(userId);
+            if (user == null) return NotFound();
+
+            _context.Remove(user);
+            _context.SaveChanges();
+            HttpContext.Session.Clear();
+
+            TempData["Success"] = "Profile removed successfully!";
+            return RedirectToAction("Login", "Account");                         
+        }
+
+        public IActionResult Logout()
+        {
+            HttpContext.Session.Clear();
+            return RedirectToAction("Index", "Home");
+        }
+
+        public IActionResult ChangePassword()
+        {
+            return View();
+        }
     }
 }
