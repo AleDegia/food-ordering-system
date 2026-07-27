@@ -106,7 +106,7 @@ namespace FoodOrderingSystem.Controllers
 
             if (ModelState.IsValid)
             {
-                var user = _context.Users.Find(userId);
+                var user = _context.Users.Find(userId);                     //EF trova e crea user e lo registra nel changeTracker
                 if (user == null) return NotFound();
 
                 // Check if email is already taken by another user
@@ -127,7 +127,7 @@ namespace FoodOrderingSystem.Controllers
                 return RedirectToAction("Profile");                         //manda all'action Profile() qui sopra
             }
 
-            return View(model);
+            return View(model);                                             //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
         }
 
         [HttpPost]          
@@ -156,6 +156,31 @@ namespace FoodOrderingSystem.Controllers
         public IActionResult ChangePassword()
         {
             return View();
+        }
+
+        [HttpPost]
+        public IActionResult ChangePassword(ChangePasswordViewModel model)
+        {
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null) return RedirectToAction("Login");
+
+            if (ModelState.IsValid)
+            {
+                var user = _context.Users.Find(userId);                 //EF trova e crea user e lo registra nel changeTracker
+                if(user == null) return NotFound();
+                    
+                if (user.Password != model.CurrentPassword) {           //da fare con hash
+                    ModelState.AddModelError("CurrentPassword", "La tua password non è questa");
+                    return View(model); 
+                }
+
+                user.Password = model.NewPassword;                      // In production, hash the password!
+                _context.SaveChanges();                                   
+
+                TempData["Success"] = "Password changed successfully!";
+                return RedirectToAction("Profile");
+            }
+            return View(model);                                         //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
         }
     }
 }
