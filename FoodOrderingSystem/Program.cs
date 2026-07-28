@@ -47,10 +47,10 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     // Replace this line in Program.cs:
-    // context.Database.Migrate();
+    context.Database.Migrate();
 
     // With this (for development only):
-    context.Database.EnsureCreated();
+    //context.Database.EnsureCreated();
 }
 
 app.Run();

@@ -43,7 +43,7 @@ namespace FoodOrderingSystem.Controllers
                 _context.Users.Add(user);
                 _context.SaveChanges();
 
-                return RedirectToAction("#");       //login page
+                return RedirectToAction("Login");       //login page
             }
 
             return View(model);

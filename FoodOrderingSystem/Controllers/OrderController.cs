@@ -1,6 +1,7 @@
 ﻿
 using FoodOrderingSystem.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
 namespace FoodOrderingSystem.Controllers
@@ -116,9 +117,14 @@ namespace FoodOrderingSystem.Controllers
             var userId = HttpContext.Session.GetInt32("UserId");
             var cart = GetCart();
 
+            if (!userId.HasValue)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
             var order = new Order
             {
-                UserId = userId.Value,
+                UserId = userId.Value,                                  //metto .Value perchè userId è nullable, UserId no e nonpuò prendere null come valore.
                 DeliveryAddress = deliveryAddress,
                 PhoneNumber = phoneNumber,
                 TotalAmount = cart.Sum(c => c.Price * c.Quantity),
@@ -134,7 +140,27 @@ namespace FoodOrderingSystem.Controllers
             _context.SaveChanges();
 
             HttpContext.Session.Remove("Cart");
-            return RedirectToAction("OrderConfirmation", new { orderId = order.Id });
+            return RedirectToAction("OrderConfirmation", new { orderId = order.Id });           //reindirizzo all'action passandogli il parametro
+        }
+
+        public IActionResult OrderConfirmation(int orderId)
+        {
+            ViewBag.OrderId = orderId;
+            return View();
+        }
+
+        public IActionResult MyOrders()
+        {
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null) return RedirectToAction("Login", "Account");
+
+            var orders = _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.FoodItem)
+                .Where(o => o.UserId == userId)
+                .AsQueryable();
+
+            return View(orders.ToList());
         }
 
     }
