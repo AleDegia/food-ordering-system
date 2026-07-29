@@ -5,7 +5,57 @@
 
 <div class="container my-5">
     <h2 class="mb-4"><i class="bi bi-bag-check"></i> My Orders</h2>
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
+    <!-- Filter Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body bg-light">
+            <form method="get" asp-action="MyOrders" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select" asp-items="@(new SelectList(ViewBag.StatusList, ViewBag.CurrentStatus))">
+                        <option value="All">All Status</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="fromDate" class="form-control" value="@ViewBag.FromDate" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sort By</label>
+                    <select name="sortOrder" class="form-select">
+                        <option value="">Newest First</option>
+                        <option value="date_asc" selected="@(ViewBag.CurrentSort == "date_asc")">Oldest First</option>
+                        <option value="total_desc" selected="@(ViewBag.CurrentSort == "total_desc")">Highest Amount</option>
+                        <option value="total_asc" selected="@(ViewBag.CurrentSort == "total_asc")">Lowest Amount</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                </div>
+            </form>
+            @if (!string.IsNullOrEmpty(ViewBag.CurrentStatus) || ViewBag.FromDate != null || ViewBag.ToDate != null)
+            {
+                <div class="mt-2">
+                    <a href="/Order/MyOrders" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Clear Filters
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
     @if (!Model.Any())
     {
         <div class="alert alert-info">
