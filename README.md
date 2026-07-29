@@ -1,6 +1,6 @@
 # 🍔 Food Ordering System
 
-![Home](./FoodOrderingHome.png)
+![Home](./foodOrderingHome.png)
 
 Applicazione web sviluppata con **ASP.NET Core MVC**, **Entity Framework
 Core** e **SQL Server** per simulare un sistema di ordinazione online.
