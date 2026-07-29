@@ -1,13 +1,13 @@
-# 🍽️ Gestione Ristoranti Web
+# 🍔 Food Ordering System
 
-![Login](./loginRisto.png)
+![Home](./FoodOrderingHome.png)
 
-Applicazione web full-stack sviluppata come progetto personale per
-approfondire lo sviluppo di applicazioni client-server con **ASP.NET
-Core Web API**, **React** ed **Entity Framework Core**.
+Applicazione web sviluppata con **ASP.NET Core MVC**, **Entity Framework
+Core** e **SQL Server** per simulare un sistema di ordinazione online.
 
-Il progetto consente la gestione di ristoranti e prenotazioni attraverso
-un backend REST e un frontend React.
+L'obiettivo del progetto è consolidare lo sviluppo di applicazioni web
+complete utilizzando il pattern MVC, la persistenza dei dati con Entity
+Framework Core e la gestione delle sessioni utente.
 
 > 🚧 **Progetto attualmente in sviluppo.**
 
@@ -17,21 +17,19 @@ un backend REST e un frontend React.
 
 ## Backend
 
--   ASP.NET Core Web API
+-   ASP.NET Core MVC
 -   Entity Framework Core
 -   SQL Server
 -   C#
--   Dependency Injection
--   Repository Pattern
 -   Session Authentication
 
 ## Frontend
 
--   React
--   JavaScript
+-   Razor Views
 -   HTML5
 -   CSS3
--   Vite
+-   Bootstrap
+-   JavaScript
 
 ------------------------------------------------------------------------
 
@@ -42,57 +40,58 @@ un backend REST e un frontend React.
 -   Registrazione
 -   Login
 -   Gestione sessione
+-   Profilo utente
 
-## Ristoranti
+## Catalogo
 
--   Creazione ristorante
--   Modifica
--   Eliminazione
--   Visualizzazione elenco
--   Upload immagine
--   Associazione proprietario
+-   Visualizzazione prodotti
+-   Ricerca e filtri
+-   Categorie
 
-## Prenotazioni
+## Ordini
 
--   Creazione prenotazioni
--   Visualizzazione prenotazioni utente
+-   Carrello
+-   Checkout
+-   Storico ordini
+-   Dettaglio ordini
 
-## Dashboard
+## Amministrazione
 
--   Statistiche generali
--   Gestione dati principali
+-   Gestione prodotti
+-   Gestione categorie
 
 ------------------------------------------------------------------------
 
 # Architettura
 
-Il backend è organizzato secondo una struttura a livelli.
+Il progetto segue il pattern MVC.
 
 ``` text
-Domain
+Controllers
+│
+├── Account
+├── Home
+├── Order
+└── Product
+
+Models
 │
 ├── Entities
-├── Interfaces
-└── Services
+├── ViewModels
+└── DbContext
 
-Infrastructure
+Views
 │
-├── DbContext
-├── Repositories
-└── Dependency Injection
+├── Account
+├── Home
+├── Orders
+└── Products
 
-Web API
+wwwroot
 │
-├── Controllers
-├── Program.cs
-└── Configuration
-
-ClientApp
-│
-├── React
-├── Components
-├── Pages
-└── Services
+├── css
+├── js
+└── images
 ```
 
 ------------------------------------------------------------------------
@@ -101,12 +100,13 @@ ClientApp
 
 Il progetto utilizza **SQL Server** tramite Entity Framework Core.
 
-Le entità principali sono:
+Entità principali:
 
--   Utente
--   Ristorante
--   Prenotazione
--   Tipologia
+-   User
+-   Product
+-   Category
+-   Order
+-   OrderDetail
 
 ------------------------------------------------------------------------
 
@@ -115,20 +115,12 @@ Le entità principali sono:
 ## 1. Clonare il repository
 
 ``` bash
-git clone https://github.com/AleDegia/c-OreilyExcercises.git
+git clone https://github.com/AleDegia/food-ordering-system.git
 ```
 
-## 2. Configurare il database
+## 2. Configurare la connection string
 
-Modificare la connection string in `appsettings.json`.
-
-Esempio:
-
-``` json
-"ConnectionStrings": {
-  "GestioneRistorantiConnectionString": "Server=YOUR_SERVER;Database=GestioneRistorantiDB;Trusted_Connection=True;TrustServerCertificate=True;"
-}
-```
+Aggiornare `appsettings.json` con il proprio server SQL Server.
 
 ## 3. Applicare le migrazioni
 
@@ -136,55 +128,33 @@ Esempio:
 dotnet ef database update
 ```
 
-## 4. Avviare il backend
+## 4. Avviare il progetto
 
 ``` bash
 dotnet run
-```
-
-## 5. Avviare il frontend
-
-Entrare nella cartella del client:
-
-``` bash
-cd ClientApp
-```
-
-Installare le dipendenze:
-
-``` bash
-npm install
-```
-
-Avviare React:
-
-``` bash
-npm run dev
 ```
 
 ------------------------------------------------------------------------
 
 # Obiettivi del progetto
 
-Questo progetto nasce con l'obiettivo di approfondire:
+Questo progetto nasce per approfondire:
 
--   Sviluppo di API REST con ASP.NET Core
+-   ASP.NET Core MVC
 -   Entity Framework Core
--   Architetture multilayer
--   Repository Pattern
--   Dependency Injection
--   Sviluppo frontend con React
--   Integrazione frontend/backend
+-   Gestione delle sessioni
+-   CRUD completi
+-   Modellazione del database
+-   Applicazioni web lato server
 
 ------------------------------------------------------------------------
 
 # Miglioramenti previsti
 
 -   Password hashing
--   Autenticazione tramite JWT o ASP.NET Identity
--   DTO e AutoMapper
+-   ASP.NET Core Identity
+-   DTO e Service Layer
 -   Validazioni avanzate
--   Gestione dei tavoli
 -   Unit Test
 -   Docker
 -   CI/CD
