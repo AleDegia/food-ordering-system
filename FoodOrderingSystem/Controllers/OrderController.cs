@@ -215,6 +215,30 @@ namespace FoodOrderingSystem.Controllers
             return View(order);
         }
 
+        [HttpPost]
+        public IActionResult CancelMyOrder(int orderId)
+        {
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null) return RedirectToAction("Login", "Account");
+
+            var order = _context.Orders.FirstOrDefault(o => o.Id == orderId && o.UserId == userId);
+
+            if (order == null) return NotFound();
+
+            // Only allow cancellation if status is Pending or Confirmed
+            if (order.Status != "Pending" && order.Status != "Confirmed")
+            {
+                TempData["Error"] = "Order cannot be cancelled at this stage!";
+                return RedirectToAction("TrackOrder", new { id = orderId });
+            }
+
+            order.Status = "Cancelled";
+            _context.SaveChanges();
+
+            TempData["Success"] = "Order cancelled successfully!";
+            return RedirectToAction("MyOrders");
+        }
+
     }
 
     public class CartItem
