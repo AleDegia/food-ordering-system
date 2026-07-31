@@ -151,6 +151,8 @@ namespace FoodOrderingSystem.Controllers
             return View();
         }
 
+        //filtri (prendo parametri dagli input del form col name uguale al nome parametro che do qui) 
+        //(metto? alle date perchè di norma non possono essere null)
         public IActionResult MyOrders(string status, string sortOrder, DateTime? fromDate, DateTime? toDate)
         {
             var userId = HttpContext.Session.GetInt32("UserId");
@@ -182,19 +184,35 @@ namespace FoodOrderingSystem.Controllers
                 ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
             }
 
-            // Sorting Logic
+            // Sorting Logic (mando a frontend la lista degli ordini gia ordinata)
             ViewBag.CurrentSort = sortOrder;
             orders = sortOrder switch
             {
                 "date_asc" => orders.OrderBy(o => o.OrderDate),
                 "total_desc" => orders.OrderByDescending(o => o.TotalAmount),
                 "total_asc" => orders.OrderBy(o => o.TotalAmount),
-                _ => orders.OrderByDescending(o => o.OrderDate) // default: newest first
+                _ => orders.OrderByDescending(o => o.OrderDate) // _ è il default dello switch compatto: newest first
             };
 
             ViewBag.StatusList = new List<string> { "All", "Pending", "Confirmed", "Preparing", "OutForDelivery", "Delivered", "Cancelled" };
 
             return View(orders.ToList());
+        }
+
+
+        public IActionResult TrackOrder(int id)
+        {
+            var userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null) return RedirectToAction("Login", "Account");
+
+            var order = _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.FoodItem)
+                .FirstOrDefault(o => o.Id == id && o.UserId == userId);             //Esegue
+
+            if (order == null) return NotFound();
+
+            return View(order);
         }
 
     }

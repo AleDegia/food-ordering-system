@@ -19,6 +19,7 @@
             <form method="get" asp-action="MyOrders" class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
+                    <!-- Aggiungo dentro il <select> un’<option> per ogni elemento di ViewBag.StatusList.-->
                     <select name="status" class="form-select" asp-items="@(new SelectList(ViewBag.StatusList, ViewBag.CurrentStatus))">
                         <option value="All">All Status</option>
                     </select>
@@ -73,6 +74,7 @@
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <span><strong>Order #@order.Id</strong></span>
                             @{
+                                //Scelgo colore del badge in base allo stato
                                 var badgeClass = order.Status switch
                                 {
                                     "Pending" => "bg-warning text-dark",
@@ -118,6 +120,13 @@
                                         </li>
                                     }
                                 </ul>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <a href="/Order/TrackOrder/@order.Id" class="btn btn-outline-primary">
+                                        <i class="bi bi-geo-alt"></i> Track Order
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
