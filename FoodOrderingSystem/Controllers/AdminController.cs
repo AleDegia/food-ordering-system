@@ -42,7 +42,62 @@ namespace FoodOrderingSystem.Controllers
             ViewBag.AvailableItems = _context.FoodItems.Where(i => i.IsAvailable).Count();
             ViewBag.UnavailableItems = _context.FoodItems.Where(i => !i.IsAvailable).Count();
 
-            return View();
+            var items = _context.FoodItems
+               .Include(f => f.Category)
+               .AsQueryable();
+
+            // Filter items by Category
+            if (categoryId.HasValue && categoryId > 0)
+            {
+                items = items.Where(f => f.CategoryId == categoryId);
+                ViewBag.CurrentCategory = categoryId;
+            }
+
+            // Filter by Search String (Name or Description)
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                items = items.Where(f =>
+                    f.Name.Contains(searchString) ||
+                    f.Description.Contains(searchString));
+                ViewBag.CurrentSearch = searchString;
+            }
+
+            // Filter by Availability
+            if (isAvailable.HasValue)
+            {
+                items = items.Where(f => f.IsAvailable == isAvailable.Value);
+                ViewBag.CurrentAvailability = isAvailable.Value;
+            }
+
+            // Filter by Price Range
+            if (minPrice.HasValue)
+            {
+                items = items.Where(f => f.Price >= minPrice.Value);
+                ViewBag.MinPrice = minPrice.Value;
+            }
+            if (maxPrice.HasValue)
+            {
+                items = items.Where(f => f.Price <= maxPrice.Value);
+                ViewBag.MaxPrice = maxPrice.Value;
+            }
+
+            items = sortOrder switch
+            {
+                "name" => items.OrderBy(f => f.Name),
+                "name_desc" => items.OrderByDescending(f => f.Name),
+
+                "price_asc" => items.OrderBy(f => f.Price),
+                "price_desc" => items.OrderByDescending(f => f.Price),
+
+                "category" => items.OrderBy(f => f.Category.Name),
+                "category_desc" => items.OrderByDescending(f => f.Category.Name),
+
+                _ => items.OrderBy(f => f.Name)
+            };
+
+            ViewBag.Categories = _context.Categories.ToList();
+
+            return View(items.ToList());
         }
     }
 }
