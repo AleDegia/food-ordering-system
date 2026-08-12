@@ -73,7 +73,7 @@
                     <label class="form-label">Category</label>
                     <select name="categoryId" class="form-select">  <!--manda il value delal option al paarametro categoryId del controller-->
                         <option value="0">All Categories</option>
-                        <!--il foreach serve a generare tutte le opzioni in base alle categorie, selected a true a displayare quella categoria-->
+                        <!--il foreach serve a generare tutte le opzioni in base alle categorie, selected a true a displayare quella categoria. catId è un identitficativo-->
                         @foreach (var cat in ViewBag.Categories)
                         {
                             <option value="@cat.Id" selected="@(ViewBag.CurrentCategory == cat.Id)">@cat.Name</option>      

@@ -1,5 +1,6 @@
 ﻿using FoodOrderingSystem.Models;
 using FoodOrderingSystem.Models.ViewModels;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ namespace FoodOrderingSystem.Controllers
     public class AccountController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly PasswordHasher<User> _passwordHasher = new();
 
         public AccountController(ApplicationDbContext context)
         {
@@ -34,12 +36,13 @@ namespace FoodOrderingSystem.Controllers
                 {
                     Username = model.Username,
                     Email = model.Email,
-                    Password = model.Password, // In production, hash this!
+                    // password con hash
                     FullName = model.FullName,
                     Address = model.Address,
                     Phone = model.Phone
                 };
 
+                user.Password = _passwordHasher.HashPassword(user, model.Password);
                 _context.Users.Add(user);
                 _context.SaveChanges();
 
@@ -59,9 +62,10 @@ namespace FoodOrderingSystem.Controllers
         public IActionResult Login(LoginViewModel model)
         {
             var user = _context.Users.FirstOrDefault(u =>
-                u.Username == model.Username && u.Password == model.Password);
+                u.Username == model.Username);
 
-            if (user != null)               //serve a memorizzare informazioni dell'utente sulla sessione server dopo il login.
+            // Verifica la password hashata 
+            if (user != null && _passwordHasher.VerifyHashedPassword(user, user.Password, model.Password) != PasswordVerificationResult.Failed)               //serve a memorizzare informazioni dell'utente sulla sessione server dopo il login.
             {
                 HttpContext.Session.SetInt32("UserId", user.Id);
                 HttpContext.Session.SetString("Username", user.Username);
@@ -168,8 +172,12 @@ namespace FoodOrderingSystem.Controllers
             {
                 var user = _context.Users.Find(userId);                 //EF trova e crea user e lo registra nel changeTracker
                 if(user == null) return NotFound();
-                    
-                if (user.Password != model.CurrentPassword) {           //da fare con hash
+
+                if (_passwordHasher.VerifyHashedPassword(
+                      user,
+                      user.Password,
+                      model.CurrentPassword) == PasswordVerificationResult.Failed)
+                {           
                     ModelState.AddModelError("CurrentPassword", "La tua password non è questa");
                     return View(model); 
                 }

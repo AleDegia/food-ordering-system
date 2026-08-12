@@ -26,14 +26,15 @@ namespace FoodOrderingSystem.Controllers
             return View();
         }
 
-        public IActionResult ManageMenu(int? categoryId, string searchString, bool? isAvailable, decimal? minPrice, decimal? maxPrice, string sortOrder)
+        //a primo giro param tutti null (tipi nullable e stringhe possono essere null), ma se clicco su un filtro o su un ordinamento, ASP.NET Core mi passa i valori dei parametri
+        public IActionResult ManageMenu(int? categoryId, string searchString, bool? isAvailable, decimal? minPrice, decimal? maxPrice, string sortOrder)   
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
 
             // Store sort order for view
             ViewBag.CurrentSort = sortOrder;
             ViewBag.NameSortParam = sortOrder == "name_desc" ? "name" : "name_desc";
-            ViewBag.PriceSortParam = sortOrder == "price_asc" ? "price_desc" : "price_asc";
+            ViewBag.PriceSortParam = sortOrder == "price_asc" ? "price_desc" : "price_asc";             //all'inizio vale price asc e poi a ogni giro cambia tra asc e desc
             ViewBag.CategorySortParam = sortOrder == "category" ? "category_desc" : "category";
 
             ViewBag.TotalOrders = _context.Orders.Count();
@@ -81,6 +82,7 @@ namespace FoodOrderingSystem.Controllers
                 ViewBag.MaxPrice = maxPrice.Value;
             }
 
+            //ordino gli items
             items = sortOrder switch
             {
                 "name" => items.OrderBy(f => f.Name),
@@ -92,7 +94,7 @@ namespace FoodOrderingSystem.Controllers
                 "category" => items.OrderBy(f => f.Category.Name),
                 "category_desc" => items.OrderByDescending(f => f.Category.Name),
 
-                _ => items.OrderBy(f => f.Name)
+                _ => items.OrderBy(f => f.Name)         //primo giro scatta solo questo
             };
 
             ViewBag.Categories = _context.Categories.ToList();
