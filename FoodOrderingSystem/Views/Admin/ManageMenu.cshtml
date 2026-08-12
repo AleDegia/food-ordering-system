@@ -224,7 +224,18 @@
                                     {
                                         <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Unavailable</span>
                                     }
+                                    <!-- Toggle Availability Form -->
+                                    <form asp-action="ToggleAvailability" method="post" class="d-inline"
+                                          title="@(item.IsAvailable ? "Make Unavailable" : "Make Available")">
+    
+                                        <input type="hidden" name="id" value="@item.Id" />
+    
+                                        <button type="submit" class="btn btn-sm @(item.IsAvailable ? "btn-secondary" : "btn-success")">
+                                            <i class="bi @(item.IsAvailable ? "bi-eye" : "bi-eye-slash")"></i>
+                                        </button>
+                                    </form>
                                 </td>
+                                
                                 <td>
                                     <button type="button" class="btn btn-sm btn-danger">
                                         <i class="bi bi-trash"></i>

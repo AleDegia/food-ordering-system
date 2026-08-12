@@ -101,5 +101,24 @@ namespace FoodOrderingSystem.Controllers
 
             return View(items.ToList());
         }
+
+        [HttpPost]
+        public IActionResult ToggleAvailability(int id)
+        {
+            // Security check: Only Admins can toggle availability
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            var item = _context.FoodItems.Find(id);
+            if (item == null) return NotFound();
+
+            // Logic to flip the availability status
+            item.IsAvailable = !item.IsAvailable;
+            _context.SaveChanges();
+
+            // Set notification message for the user
+            TempData["Success"] = $"{item.Name} is now {(item.IsAvailable ? "available" : "unavailable")}";
+
+            return RedirectToAction("ManageMenu");
+        }
     }
 }
