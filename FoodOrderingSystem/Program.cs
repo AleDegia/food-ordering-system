@@ -35,6 +35,8 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthorization();
 
+// Serve the images uploaded by administrators after the application has started.
+app.UseStaticFiles();
 app.MapStaticAssets();
 
 app.MapControllerRoute(

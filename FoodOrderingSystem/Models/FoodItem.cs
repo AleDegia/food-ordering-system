@@ -19,7 +19,7 @@ namespace FoodOrderingSystem.Models
         public string ImageUrl { get; set; }
 
         public int CategoryId { get; set; }                      // Foreign Key
-        public Category Category { get; set; }                   // Navigation Property
+        public Category? Category { get; set; }                  // Navigation Property, loaded separately from the form
 
         public bool IsAvailable { get; set; } = true;
     }

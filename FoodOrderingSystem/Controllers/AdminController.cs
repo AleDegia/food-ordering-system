@@ -139,6 +139,8 @@ namespace FoodOrderingSystem.Controllers
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
 
             ModelState.Remove(nameof(FoodItem.ImageUrl));
+            ModelState.Remove(nameof(FoodItem.Description));
+            item.Description ??= string.Empty;
 
             const long maxImageSize = 5 * 1024 * 1024;
             var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
