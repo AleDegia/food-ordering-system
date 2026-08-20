@@ -147,7 +147,11 @@
     <div class="card shadow">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>Showing @Model.Count Items</span>
-            <div class="btn-group">
+            <div class="d-flex gap-2">
+                <a asp-controller="Admin" asp-action="AddFoodItem" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add New Item
+                </a>
+                <div class="btn-group">
                 <a href="@Url.Action("ManageMenu", new          //"Generami l'URL che porta alla action ManageMenu del controller che ha generato la view, passando anche questi parametri."
                    {
                        categoryId = ViewBag.CurrentCategory,
@@ -181,6 +185,7 @@
                    })" class="btn btn-sm btn-outline-secondary">
                     Category <i class="bi bi-arrow-down-up"></i>
                 </a>
+                </div>
             </div>
         </div>
         <div class="card-body">

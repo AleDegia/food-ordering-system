@@ -7,10 +7,12 @@ namespace FoodOrderingSystem.Controllers
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public AdminController(ApplicationDbContext context)
+        public AdminController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
         {
             _context = context;
+            _webHostEnvironment = webHostEnvironment;
         }
         private bool IsAdmin()
         {
@@ -118,6 +120,69 @@ namespace FoodOrderingSystem.Controllers
             // Set notification message for the user
             TempData["Success"] = $"{item.Name} is now {(item.IsAvailable ? "available" : "unavailable")}";
 
+            return RedirectToAction("ManageMenu");
+        }
+
+        [HttpGet]
+        public IActionResult AddFoodItem()
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            ViewBag.Categories = _context.Categories.ToList();
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddFoodItem(FoodItem item, IFormFile imageFile)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            ModelState.Remove(nameof(FoodItem.ImageUrl));
+
+            const long maxImageSize = 5 * 1024 * 1024;
+            var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg", ".jpeg", ".png", ".gif", ".webp"
+            };
+
+            if (imageFile == null || imageFile.Length == 0)
+            {
+                ModelState.AddModelError(nameof(imageFile), "Select an image for the item.");
+            }
+            else if (imageFile.Length > maxImageSize)
+            {
+                ModelState.AddModelError(nameof(imageFile), "The image cannot exceed 5 MB.");
+            }
+            else
+            {
+                var extension = Path.GetExtension(imageFile.FileName);
+                if (!allowedExtensions.Contains(extension))
+                {
+                    ModelState.AddModelError(nameof(imageFile), "Use a JPG, PNG, GIF or WEBP image.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Categories = _context.Categories.ToList();
+                return View(item);
+            }
+
+            var uploadsDirectory = Path.Combine(_webHostEnvironment.WebRootPath, "images");
+            Directory.CreateDirectory(uploadsDirectory);
+
+            var uploadedImage = imageFile!;
+            var imageFileName = $"{Guid.NewGuid():N}{Path.GetExtension(uploadedImage.FileName).ToLowerInvariant()}";
+            var imagePath = Path.Combine(uploadsDirectory, imageFileName);
+            await using (var stream = new FileStream(imagePath, FileMode.CreateNew))
+            {
+                await uploadedImage.CopyToAsync(stream);
+            }
+
+            item.ImageUrl = $"/images/{imageFileName}";
+            _context.FoodItems.Add(item);
+            await _context.SaveChangesAsync();
             return RedirectToAction("ManageMenu");
         }
     }
