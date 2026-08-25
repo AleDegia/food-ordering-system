@@ -54,13 +54,20 @@
         </div>
     </div>
 
-    @* @if (TempData["Success"] != null)
+    @if (TempData["Success"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             @TempData["Success"]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    } *@
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
     <!-- Filter Section -->
     <div class="card shadow-sm mb-4">
@@ -242,9 +249,13 @@
                                 </td>
                                 
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-danger">
+                                    <form asp-action="DeleteFoodItem" method="post" class="d-inline"
+                                          onsubmit="return confirm('Delete @item.Name? This action cannot be undone.');">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete @item.Name">
                                         <i class="bi bi-trash"></i>
-                                    </button>
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         }

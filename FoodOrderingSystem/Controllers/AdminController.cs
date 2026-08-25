@@ -105,6 +105,7 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ToggleAvailability(int id)
         {
             // Security check: Only Admins can toggle availability
@@ -120,6 +121,43 @@ namespace FoodOrderingSystem.Controllers
             // Set notification message for the user
             TempData["Success"] = $"{item.Name} is now {(item.IsAvailable ? "available" : "unavailable")}";
 
+            return RedirectToAction("ManageMenu");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFoodItem(int id)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            var item = await _context.FoodItems.FindAsync(id);
+            if (item == null)
+            {
+                TempData["Error"] = "The selected item no longer exists.";
+                return RedirectToAction("ManageMenu");
+            }
+
+            var itemName = item.Name;
+            var imageUrl = item.ImageUrl;
+
+            _context.FoodItems.Remove(item);
+            await _context.SaveChangesAsync();
+
+            // Uploaded images use a GUID filename; keep seeded/static assets intact.
+            var imageFileName = Path.GetFileName(imageUrl);
+            if (imageUrl.StartsWith("/images/", StringComparison.OrdinalIgnoreCase) &&
+                Guid.TryParseExact(Path.GetFileNameWithoutExtension(imageFileName), "N", out _))
+            {
+                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "images", imageFileName);
+
+                if (System.IO.File.Exists(imagePath) &&
+                    !await _context.FoodItems.AnyAsync(foodItem => foodItem.ImageUrl == imageUrl))
+                {
+                    System.IO.File.Delete(imagePath);
+                }
+            }
+
+            TempData["Success"] = $"{itemName} was deleted successfully.";
             return RedirectToAction("ManageMenu");
         }
 
