@@ -162,6 +162,92 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> EditFoodItem(int id)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            var item = await _context.FoodItems.FindAsync(id);
+            if (item == null) return NotFound();
+
+            ViewBag.Categories = await _context.Categories.ToListAsync();
+            return View(item);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditFoodItem(int id, FoodItem item, IFormFile? imageFile)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+            if (id != item.Id) return NotFound();
+
+            var existingItem = await _context.FoodItems.FindAsync(id);
+            if (existingItem == null) return NotFound();
+
+            ModelState.Remove(nameof(FoodItem.ImageUrl));
+            ModelState.Remove(nameof(FoodItem.Category));
+            ModelState.Remove(nameof(FoodItem.Description));
+            item.Description ??= string.Empty;
+
+            const long maxImageSize = 5 * 1024 * 1024;
+            var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg", ".jpeg", ".png", ".gif", ".webp"
+            };
+
+            if (imageFile is { Length: > 0 })
+            {
+                var extension = Path.GetExtension(imageFile.FileName);
+                if (imageFile.Length > maxImageSize)
+                {
+                    ModelState.AddModelError(nameof(imageFile), "The image cannot exceed 5 MB.");
+                }
+                else if (!allowedExtensions.Contains(extension))
+                {
+                    ModelState.AddModelError(nameof(imageFile), "Use a JPG, PNG, GIF or WEBP image.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                item.ImageUrl = existingItem.ImageUrl;
+                ViewBag.Categories = await _context.Categories.ToListAsync();
+                return View(item);
+            }
+
+            existingItem.Name = item.Name;
+            existingItem.Description = item.Description;
+            existingItem.Price = item.Price;
+            existingItem.CategoryId = item.CategoryId;
+            existingItem.IsAvailable = item.IsAvailable;
+
+            var oldImageUrl = existingItem.ImageUrl;
+            if (imageFile is { Length: > 0 })
+            {
+                var uploadsDirectory = Path.Combine(_webHostEnvironment.WebRootPath, "images");
+                Directory.CreateDirectory(uploadsDirectory);
+
+                var imageFileName = $"{Guid.NewGuid():N}{Path.GetExtension(imageFile.FileName).ToLowerInvariant()}";
+                var imagePath = Path.Combine(uploadsDirectory, imageFileName);
+                await using (var stream = new FileStream(imagePath, FileMode.CreateNew))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+
+                existingItem.ImageUrl = $"/images/{imageFileName}";
+            }
+
+            await _context.SaveChangesAsync();
+
+            if (imageFile is { Length: > 0 })
+            {
+                await DeleteUploadedImageIfUnused(oldImageUrl);
+            }
+
+            TempData["Success"] = $"{existingItem.Name} was updated successfully.";
+            return RedirectToAction("ManageMenu");
+        }
+
+        [HttpGet]
         public IActionResult AddFoodItem()
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
@@ -224,6 +310,23 @@ namespace FoodOrderingSystem.Controllers
             _context.FoodItems.Add(item);
             await _context.SaveChangesAsync();
             return RedirectToAction("ManageMenu");
+        }
+
+        private async Task DeleteUploadedImageIfUnused(string imageUrl)
+        {
+            var imageFileName = Path.GetFileName(imageUrl);
+            if (!imageUrl.StartsWith("/images/", StringComparison.OrdinalIgnoreCase) ||
+                !Guid.TryParseExact(Path.GetFileNameWithoutExtension(imageFileName), "N", out _) ||
+                await _context.FoodItems.AnyAsync(foodItem => foodItem.ImageUrl == imageUrl))
+            {
+                return;
+            }
+
+            var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "images", imageFileName);
+            if (System.IO.File.Exists(imagePath))
+            {
+                System.IO.File.Delete(imagePath);
+            }
         }
     }
 }

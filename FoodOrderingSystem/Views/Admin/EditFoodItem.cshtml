@@ -1,0 +1,100 @@
+@model FoodItem
+@{
+    ViewData["Title"] = "Edit Food Item";
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+}
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Food Item</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="EditFoodItem" method="post" enctype="multipart/form-data">
+                        <input asp-for="Id" type="hidden" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label asp-for="Name" class="form-label">Item Name</label>
+                                    <input asp-for="Name" class="form-control" required />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="form-label">Description</label>
+                                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="Price" class="form-label">Price ($)</label>
+                                            <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" required />
+                                            <span asp-validation-for="Price" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="CategoryId" class="form-label">Category</label>
+                                            <select asp-for="CategoryId" class="form-select" required>
+                                                @foreach (var category in categories)
+                                                {
+                                                    <option value="@category.Id">@category.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="imageFile" class="form-label">Replace image (optional)</label>
+                                    <input id="imageFile" name="imageFile" class="form-control" type="file"
+                                           accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" />
+                                    <small class="text-muted">Leave empty to keep the current image. JPG, PNG, GIF or WEBP — maximum 5 MB.</small>
+                                    <span class="text-danger">@Html.ValidationMessage("imageFile")</span>
+                                </div>
+
+                                <div class="mb-3 form-check">
+                                    <input asp-for="IsAvailable" class="form-check-input" />
+                                    <label asp-for="IsAvailable" class="form-check-label">Available</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">Preview</div>
+                                    <div class="card-body text-center">
+                                        <img id="imagePreview" src="@Model.ImageUrl" alt="@Model.Name"
+                                             style="max-width: 100%; height: 150px; object-fit: cover;" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="ManageMenu" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('imageFile').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('imagePreview').src = URL.createObjectURL(file);
+            }
+        });
+    </script>
+}
