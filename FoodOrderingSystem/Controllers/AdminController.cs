@@ -328,5 +328,89 @@ namespace FoodOrderingSystem.Controllers
                 System.IO.File.Delete(imagePath);
             }
         }
+
+        public IActionResult Orders(string status, string searchString, DateTime? fromDate, DateTime? toDate, string sortOrder)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            // Store current sort order for view
+            ViewBag.CurrentSort = sortOrder;
+            ViewBag.DateSortParam = sortOrder == "date_asc" ? "date_desc" : "date_asc";
+            ViewBag.TotalSortParam = sortOrder == "total_asc" ? "total_desc" : "total_asc";
+            ViewBag.StatusSortParam = sortOrder == "status" ? "status_desc" : "status";
+
+            var orders = _context.Orders
+                .Include(o => o.User)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.FoodItem)
+                .AsQueryable();
+
+            // Filter by Status
+            if (!string.IsNullOrEmpty(status) && status != "All")
+            {
+                orders = orders.Where(o => o.Status == status);
+                ViewBag.CurrentStatus = status;
+            }
+
+            // Filter by Customer Name
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                orders = orders.Where(o =>
+                    o.User.FullName.Contains(searchString) ||
+                    o.User.Username.Contains(searchString) ||
+                    o.User.Email.Contains(searchString));
+                ViewBag.CurrentSearch = searchString;
+            }
+
+            // Filter by Date Range
+            if (fromDate.HasValue)
+            {
+                orders = orders.Where(o => o.OrderDate >= fromDate.Value);
+                ViewBag.FromDate = fromDate.Value.ToString("yyyy-MM-dd");
+            }
+            if (toDate.HasValue)
+            {
+                orders = orders.Where(o => o.OrderDate <= toDate.Value.AddDays(1));
+                ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
+            }
+
+            // Sorting
+            orders = sortOrder switch
+            {
+                "date_asc" => orders.OrderBy(o => o.OrderDate),
+                "date_desc" => orders.OrderByDescending(o => o.OrderDate),
+                "total_asc" => orders.OrderBy(o => o.TotalAmount),
+                "total_desc" => orders.OrderByDescending(o => o.TotalAmount),
+                "status" => orders.OrderBy(o => o.Status),
+                "status_desc" => orders.OrderByDescending(o => o.Status),
+                _ => orders.OrderByDescending(o => o.OrderDate) // default
+            };
+
+            // Status counts for dashboard stats
+            ViewBag.PendingCount = _context.Orders.Count(o => o.Status == "Pending");
+            ViewBag.ConfirmedCount = _context.Orders.Count(o => o.Status == "Confirmed");
+            ViewBag.TodayCount = _context.Orders.Count(o => o.OrderDate.Date == DateTime.Today);
+            ViewBag.TotalRevenue = _context.Orders.Where(o => o.Status != "Cancelled").Sum(o => (decimal?)o.TotalAmount) ?? 0;
+
+            ViewBag.StatusList = new List<string> { "All", "Pending", "Confirmed", "Preparing", "OutForDelivery", "Delivered", "Cancelled" };
+
+            return View(orders.ToList());
+        }
+
+        public IActionResult OrderDetails(int id)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");       //rimanda a Homecontroller, actionResult Index, se non sono admin
+
+            var order = _context.Orders
+                .Include(o => o.User)                                       //uso navigation property per includere i dettagli dell'utente associato all'ordine (x ogni ordine voglio vedere anche i dettagli dell'utente che l'ha fatto)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.FoodItem)
+                .FirstOrDefault(o => o.Id == id);
+
+            if (order == null) return NotFound();
+
+            //ritorno view 
+            return View("~/Views/Order/OrderDetails.cshtml", order);
+        }
     }
 }

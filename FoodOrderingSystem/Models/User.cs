@@ -4,7 +4,7 @@ namespace FoodOrderingSystem.Models
 {
     public class User
     {
-        public int Id { get; set; }
+        public int Id { get; set; }                         // PK (Id riconosciuto per convenzione di EF)
 
         [Required]
         [StringLength(50)]

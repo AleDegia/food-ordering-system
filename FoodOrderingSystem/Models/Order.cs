@@ -8,8 +8,8 @@ namespace FoodOrderingSystem.Models
     {
         public int Id { get; set; }
 
-        public int UserId { get; set; }
-        public User User { get; set; }
+        public int UserId { get; set; }                 //FK (NavigationProperty + Id, per convenzione)
+        public User User { get; set; }                  //Navigation Property
 
         public DateTime OrderDate { get; set; } = DateTime.Now;
 
@@ -22,6 +22,6 @@ namespace FoodOrderingSystem.Models
 
         public string Status { get; set; } = "Pending";
 
-        public ICollection<OrderItem> OrderItems { get; set; }
+        public ICollection<OrderItem> OrderItems { get; set; }              //NP con relationship 1 a molti con OrderItem
     }
 }
