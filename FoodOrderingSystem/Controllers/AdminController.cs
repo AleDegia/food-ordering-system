@@ -334,8 +334,8 @@ namespace FoodOrderingSystem.Controllers
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
 
             // Store current sort order for view
-            ViewBag.CurrentSort = sortOrder;
-            ViewBag.DateSortParam = sortOrder == "date_asc" ? "date_desc" : "date_asc";
+            ViewBag.CurrentSort = sortOrder;                                                    //salvo ordinamento attivo
+            ViewBag.DateSortParam = sortOrder == "date_asc" ? "date_desc" : "date_asc";         //do ordinamento
             ViewBag.TotalSortParam = sortOrder == "total_asc" ? "total_desc" : "total_asc";
             ViewBag.StatusSortParam = sortOrder == "status" ? "status_desc" : "status";
 
@@ -343,7 +343,7 @@ namespace FoodOrderingSystem.Controllers
                 .Include(o => o.User)
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.FoodItem)
-                .AsQueryable();
+                .AsQueryable();                     //per poter aggiungere ulteriori istruzioni alla query in seguito (ad es di filtraggio e ordinamento)
 
             // Filter by Status
             if (!string.IsNullOrEmpty(status) && status != "All")
