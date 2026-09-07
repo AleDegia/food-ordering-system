@@ -225,6 +225,56 @@
                                         <a asp-controller="Admin" asp-action="OrderDetails" asp-route-id="@order.Id" class="btn btn-sm btn-outline-info" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        @if (order.Status == "Pending")
+                                        {
+                                            <form asp-action="ConfirmOrder" method="post" class="d-inline" onsubmit="return confirm('Confirm this order?');">
+                                                <input type="hidden" name="orderId" value="@order.Id" />
+                                                <button type="submit" class="btn btn-sm btn-success" title="Confirm">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                            </form>
+                                        }
+
+                                        @if (order.Status == "Confirmed")
+                                        {
+                                            <form asp-action="UpdateOrderStatus" method="post" class="d-inline">
+                                                <input type="hidden" name="orderId" value="@order.Id" />
+                                                <input type="hidden" name="status" value="Preparing" />
+                                                <button type="submit" class="btn btn-sm btn-primary" title="Start Preparing">
+                                                    <i class="bi bi-fire"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (order.Status == "Preparing")
+                                        {
+                                            <form asp-action="UpdateOrderStatus" method="post" class="d-inline">
+                                                <input type="hidden" name="orderId" value="@order.Id" />
+                                                <input type="hidden" name="status" value="OutForDelivery" />
+                                                <button type="submit" class="btn btn-sm btn-secondary" title="Out for Delivery">
+                                                    <i class="bi bi-truck"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (order.Status == "OutForDelivery")
+                                        {
+                                            <form asp-action="UpdateOrderStatus" method="post" class="d-inline">
+                                                <input type="hidden" name="orderId" value="@order.Id" />
+                                                <input type="hidden" name="status" value="Delivered" />
+                                                <button type="submit" class="btn btn-sm btn-success" title="Mark Delivered">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            </form>
+                                        }
+
+                                        @if (order.Status != "Delivered" && order.Status != "Cancelled")
+                                        {
+                                            <form asp-action="CancelOrder" method="post" class="d-inline" onsubmit="return confirm('Cancel this order?');">
+                                                <input type="hidden" name="orderId" value="@order.Id" />
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Cancel">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </form>
+                                        }
                                     </div>
                                 </td>
                             </tr>

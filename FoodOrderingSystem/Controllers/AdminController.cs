@@ -412,5 +412,58 @@ namespace FoodOrderingSystem.Controllers
             //ritorno view 
             return View("~/Views/Order/OrderDetails.cshtml", order);
         }
+
+        [HttpPost]
+        public IActionResult UpdateOrderStatus(int orderId, string status)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            var order = _context.Orders.Find(orderId);
+            if (order == null) return NotFound();
+
+            // Valid statuses: Pending, Confirmed, Preparing, OutForDelivery, Delivered, Cancelled
+            order.Status = status;
+            _context.SaveChanges();
+
+            TempData["Success"] = $"Order #{orderId} status updated to {status}";
+            return RedirectToAction("Orders");
+        }
+
+        [HttpPost]
+        public IActionResult ConfirmOrder(int orderId)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            var order = _context.Orders.Find(orderId);
+            if (order == null) return NotFound();
+
+            order.Status = "Confirmed";
+            _context.SaveChanges();
+
+            TempData["Success"] = $"Order #{orderId} has been confirmed!";
+            return RedirectToAction("Orders");
+        }
+
+        [HttpPost]
+        public IActionResult CancelOrder(int orderId)
+        {
+            if (!IsAdmin()) return RedirectToAction("Index", "Home");
+
+            var order = _context.Orders.Find(orderId);
+            if (order == null) return NotFound();
+
+            // Only allow cancellation if not already delivered
+            if (order.Status == "Delivered")
+            {
+                TempData["Error"] = "Cannot cancel delivered orders!";
+                return RedirectToAction("Orders");
+            }
+
+            order.Status = "Cancelled";
+            _context.SaveChanges();
+
+            TempData["Success"] = $"Order #{orderId} has been cancelled!";
+            return RedirectToAction("Orders");
+        }
     }
 }
