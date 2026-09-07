@@ -343,7 +343,7 @@ namespace FoodOrderingSystem.Controllers
                 .Include(o => o.User)
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.FoodItem)
-                .AsQueryable();                     //per poter aggiungere ulteriori istruzioni alla query in seguito (ad es di filtraggio e ordinamento)
+                .AsQueryable();                                       //per poter aggiungere ulteriori istruzioni alla query in seguito (ad es di filtraggio e ordinamento)
 
             // Filter by Status
             if (!string.IsNullOrEmpty(status) && status != "All")
@@ -355,7 +355,7 @@ namespace FoodOrderingSystem.Controllers
             // Filter by Customer Name
             if (!string.IsNullOrEmpty(searchString))
             {
-                orders = orders.Where(o =>
+                orders = orders.Where(o =>                              //aggiungo filtro alla query di prima, che già includeva User e OrderItems
                     o.User.FullName.Contains(searchString) ||
                     o.User.Username.Contains(searchString) ||
                     o.User.Email.Contains(searchString));

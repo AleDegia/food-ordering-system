@@ -239,6 +239,27 @@ namespace FoodOrderingSystem.Controllers
             return RedirectToAction("MyOrders");
         }
 
+        [HttpGet]
+        public IActionResult GetCartCount()
+        {
+            // Retrieve the Cart JSON string from the Session
+            var cartJson = HttpContext.Session.GetString("Cart");
+            var count = 0;
+
+            // Check if the cart is not empty
+            if (!string.IsNullOrEmpty(cartJson))
+            {
+                // Deserialize the JSON back into a List of CartItems
+                var cart = JsonConvert.DeserializeObject<List<CartItem>>(cartJson);
+
+                // Sum up the total quantity of all items in the cart
+                count = cart.Sum(c => c.Quantity);
+            }
+
+            // Return the count as a JSON object for AJAX calls
+            return Json(new { count });
+        }
+
     }
 
     public class CartItem

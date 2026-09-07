@@ -79,12 +79,13 @@
             <form method="get" asp-action="Orders" class="row g-3 align-items-end">
                 <div class="col-md-2">
                     <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
+                    <select name="status" class="form-select">          @* associo input a parametro status dell action Orders del controller Admin con 'name="status"' *@
                         <option value="All">All Status</option>
                         @foreach (var s in ViewBag.StatusList)
                         {
                             if (s != "All")
                             {
+                                @* value = "@s": è il valore inviato al controller quando l’opzione viene scelta, selected è true o false. *@
                                 <option value="@s" selected="@(ViewBag.CurrentStatus == s)">@s</option>
                             }
                         }
@@ -137,6 +138,7 @@
                     }
                     @if (ViewBag.FromDate != null)
                     {
+                        //il value iniziale deriva dal viewbag del controller ma poi se seleziono data lato utente il value prende il valore selezionato dal calendario al posto del viewbag
                         <span class="badge bg-info me-1">From: @ViewBag.FromDate</span>
                     }
                     @if (ViewBag.ToDate != null)
