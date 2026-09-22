@@ -1,4 +1,5 @@
 using FoodOrderingSystem.Models;
+using FoodOrderingSystem.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +20,8 @@ builder.Services.AddSession(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Service layer
+builder.Services.AddScoped<IOrderService, OrderService>();  //quando qualcuno chiede IOrderService va a creare OrderService
 
 var app = builder.Build();
 

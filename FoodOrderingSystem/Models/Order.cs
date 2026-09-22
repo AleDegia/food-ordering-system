@@ -24,4 +24,5 @@ namespace FoodOrderingSystem.Models
 
         public ICollection<OrderItem> OrderItems { get; set; }              //NP con relationship 1 a molti con OrderItem
     }
+
 }

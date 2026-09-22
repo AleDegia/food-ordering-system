@@ -1,4 +1,5 @@
 ﻿using FoodOrderingSystem.Models;
+using FoodOrderingSystem.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,11 +9,22 @@ namespace FoodOrderingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IOrderService _orderService;
+        private static readonly HashSet<string> ValidOrderStatuses = new(StringComparer.Ordinal)
+        {
+            "Pending",
+            "Confirmed",
+            "Preparing",
+            "OutForDelivery",
+            "Delivered",
+            "Cancelled"
+        };
 
-        public AdminController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment)
+        public AdminController(ApplicationDbContext context, IWebHostEnvironment webHostEnvironment, IOrderService orderService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
+            _orderService = orderService;
         }
         private bool IsAdmin()
         {
@@ -93,8 +105,8 @@ namespace FoodOrderingSystem.Controllers
                 "price_asc" => items.OrderBy(f => f.Price),
                 "price_desc" => items.OrderByDescending(f => f.Price),
 
-                "category" => items.OrderBy(f => f.Category.Name),
-                "category_desc" => items.OrderByDescending(f => f.Category.Name),
+                "category" => items.OrderBy(f => f.Category != null ? f.Category.Name : string.Empty),
+                "category_desc" => items.OrderByDescending(f => f.Category != null ? f.Category.Name : string.Empty),
 
                 _ => items.OrderBy(f => f.Name)         //primo giro scatta solo questo
             };
@@ -348,8 +360,11 @@ namespace FoodOrderingSystem.Controllers
             // Filter by Status
             if (!string.IsNullOrEmpty(status) && status != "All")
             {
-                orders = orders.Where(o => o.Status == status);
-                ViewBag.CurrentStatus = status;
+                if (ValidOrderStatuses.Contains(status))
+                {
+                    orders = orders.Where(o => o.Status == status);
+                    ViewBag.CurrentStatus = status;
+                }
             }
 
             // Filter by Customer Name
@@ -421,7 +436,12 @@ namespace FoodOrderingSystem.Controllers
             var order = _context.Orders.Find(orderId);
             if (order == null) return NotFound();
 
-            // Valid statuses: Pending, Confirmed, Preparing, OutForDelivery, Delivered, Cancelled
+            if (!ValidOrderStatuses.Contains(status))
+            {
+                TempData["Error"] = "Invalid order status.";
+                return RedirectToAction("Orders");
+            }
+
             order.Status = status;
             _context.SaveChanges();
 
@@ -434,11 +454,16 @@ namespace FoodOrderingSystem.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
 
-            var order = _context.Orders.Find(orderId);
-            if (order == null) return NotFound();
+            OperationResult result = _orderService.ConfirmOrder(orderId);
 
-            order.Status = "Confirmed";
-            _context.SaveChanges();
+            if (result.Code == OperationResultCode.NotFound)
+                return NotFound();
+
+            if (!result.IsSuccess)
+            {
+                TempData["Error"] = result.ErrorMessage;
+                return RedirectToAction("Orders");
+            }
 
             TempData["Success"] = $"Order #{orderId} has been confirmed!";
             return RedirectToAction("Orders");
@@ -449,18 +474,16 @@ namespace FoodOrderingSystem.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
 
-            var order = _context.Orders.Find(orderId);
-            if (order == null) return NotFound();
+            var result = _orderService.CancelOrder(orderId);
 
-            // Only allow cancellation if not already delivered
-            if (order.Status == "Delivered")
+            if (result.Code == OperationResultCode.NotFound)
+                return NotFound();
+
+            if (!result.IsSuccess)
             {
-                TempData["Error"] = "Cannot cancel delivered orders!";
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Orders");
             }
-
-            order.Status = "Cancelled";
-            _context.SaveChanges();
 
             TempData["Success"] = $"Order #{orderId} has been cancelled!";
             return RedirectToAction("Orders");
