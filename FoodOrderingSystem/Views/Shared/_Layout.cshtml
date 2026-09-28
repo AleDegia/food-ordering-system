@@ -58,11 +58,11 @@
                             <span class="badge bg-danger cart-badge" id="cartCount">0</span>
                         </a>
                     </li>
-                    @if (Context.Session.GetString("Username") != null)
+                    @if (User.Identity.Name  != null)
                     {
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> @Context.Session.GetString("Username")
+                                <i class="bi bi-person-circle"></i> @User.Identity.Name 
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>

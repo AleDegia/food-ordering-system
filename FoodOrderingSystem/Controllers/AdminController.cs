@@ -372,7 +372,7 @@ namespace FoodOrderingSystem.Controllers
             {
                 orders = orders.Where(o =>                              //aggiungo filtro alla query di prima, che già includeva User e OrderItems
                     o.User.FullName.Contains(searchString) ||
-                    o.User.Username.Contains(searchString) ||
+                    o.User.UserName.Contains(searchString) ||
                     o.User.Email.Contains(searchString));
                 ViewBag.CurrentSearch = searchString;
             }

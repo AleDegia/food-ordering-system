@@ -1,10 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
 namespace FoodOrderingSystem.Models
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
@@ -13,10 +15,11 @@ namespace FoodOrderingSystem.Models
         public DbSet<Category> Categories { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
-        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // per chiamare la logica di configurazione in predefinita di IdentityDbContext del suo OnModelCreating
+            base.OnModelCreating(modelBuilder);
             // Seed initial data
             modelBuilder.Entity<Category>().HasData(
                 new Category { Id = 1, Name = "Pizza", Description = "Delicious pizzas" },
@@ -28,20 +31,6 @@ namespace FoodOrderingSystem.Models
                 new FoodItem { Id = 1, Name = "Margherita Pizza", Description = "Classic tomato and cheese", Price = 12.99m, CategoryId = 1, ImageUrl = "/images/Margheritapizza.jpg" },
                 new FoodItem { Id = 2, Name = "Pepperoni Pizza", Description = "Spicy pepperoni with cheese", Price = 14.99m, CategoryId = 1, ImageUrl = "/images/Pepperonipizza.jpg" },
                 new FoodItem { Id = 3, Name = "Cheeseburger", Description = "Beef patty with cheese", Price = 9.99m, CategoryId = 2, ImageUrl = "/images/Cheeseburger.jpg" }
-            );
-
-            modelBuilder.Entity<User>().HasData(
-               new User
-               {
-                   Id = 1,
-                   Username = "admin",
-                   Email = "admin@foodorder.com",
-                   Password = "admin123",  // In production, use hashed password!
-                   FullName = "Administrator",
-                   Address = "Admin Office",
-                   Phone = "1234567890",
-                   IsAdmin = true
-               }
             );
         }
     }

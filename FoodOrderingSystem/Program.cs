@@ -1,6 +1,7 @@
 using FoodOrderingSystem.Models;
 using FoodOrderingSystem.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,13 @@ builder.Services.AddSession(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Add Identity services
+builder.Services.AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
+{
+    options.User.RequireUniqueEmail = true;
+}).AddEntityFrameworkStores<ApplicationDbContext>()
+  .AddDefaultTokenProviders();
+
 // Service layer
 builder.Services.AddScoped<IOrderService, OrderService>();  //quando qualcuno chiede IOrderService va a creare OrderService
 
@@ -35,8 +43,10 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
-app.UseSession();
-app.UseAuthorization();
+app.UseSession();        // continua a servire per il carrello
+app.UseAuthentication(); // legge il cookie Identity
+app.UseAuthorization();  // applica [Authorize]
+
 
 // Serve the images uploaded by administrators after the application has started.
 app.UseStaticFiles();

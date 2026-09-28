@@ -9,7 +9,7 @@ namespace FoodOrderingSystem.Models
         public int Id { get; set; }
 
         public int UserId { get; set; }                 //FK (NavigationProperty + Id, per convenzione)
-        public User User { get; set; }                  //Navigation Property
+        public ApplicationUser User { get; set; } = null!;        //Navigation Property
 
         public DateTime OrderDate { get; set; } = DateTime.Now;
 

@@ -1,5 +1,6 @@
 ﻿using FoodOrderingSystem.Models;
 using FoodOrderingSystem.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,12 +9,15 @@ namespace FoodOrderingSystem.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly PasswordHasher<User> _passwordHasher = new();
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AccountController(ApplicationDbContext context)
+        public AccountController(
+         UserManager<ApplicationUser> userManager,
+         SignInManager<ApplicationUser> signInManager)
         {
-            _context = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
         }
 
         [HttpGet]
@@ -23,7 +27,7 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
-        public IActionResult Register(RegisterViewModel model)
+        public async Task<IActionResult> Register(RegisterViewModel model)
         {
             // Prima di entrare qui, ASP.NET ha già:
             // 1. creato il RegisterViewModel
@@ -32,19 +36,28 @@ namespace FoodOrderingSystem.Controllers
             // 4. costruito il ModelState
             if (ModelState.IsValid)         
             {
-                var user = new User
+                var user = new ApplicationUser
                 {
-                    Username = model.Username,
+                    UserName = model.Username,
                     Email = model.Email,
                     // password con hash
                     FullName = model.FullName,
                     Address = model.Address,
-                    Phone = model.Phone
+                    PhoneNumber = model.Phone
                 };
 
-                user.Password = _passwordHasher.HashPassword(user, model.Password);
-                _context.Users.Add(user);
-                _context.SaveChanges();
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (!result.Succeeded)
+                {
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError("", error.Description);
+                    }
+                    return View(model);
+                }
+                /*questo lo fa già _userManager.CreateAsync(user, model.Password) con la logica di Identity*/
+                //_context.Users.Add(user);
+                //_context.SaveChanges();
 
                 return RedirectToAction("Login");       //login page
             }
@@ -59,43 +72,35 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
-        public IActionResult Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model)
         {
-            var user = _context.Users.FirstOrDefault(u =>
-                u.Username == model.Username);
-
-            // Verifica la password hashata 
-            if (user != null && _passwordHasher.VerifyHashedPassword(user, user.Password, model.Password) != PasswordVerificationResult.Failed)               //serve a memorizzare informazioni dell'utente sulla sessione server dopo il login.
+            var result = await _signInManager.PasswordSignInAsync(model.Username,
+                           model.Password, model.RememberMe, lockoutOnFailure: false);
+            if (result.Succeeded)
             {
-                HttpContext.Session.SetInt32("UserId", user.Id);
-                HttpContext.Session.SetString("Username", user.Username);
-                HttpContext.Session.SetString("IsAdmin", user.IsAdmin.ToString());
-
                 return RedirectToAction("Index", "Home");
             }
 
-            ModelState.AddModelError("", "Invalid username or password");       //aggiunge errore
+            ModelState.AddModelError("", "Username o password non validi.");
             return View(model);
         }
 
 
+        [Authorize]
         [HttpGet]
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
-            if (userId == null) return RedirectToAction("Login");
-
-            var user = _context.Users.Find(userId);                             //trovo utente nel db grazie al suo id nella sessione
+            var user = await _userManager.GetUserAsync(User);                    // utente autenticato presente nella richiesta/cookie dentro ogni controller MVC
             if (user == null) return NotFound();
 
             var model = new ProfileViewModel
             {
                 Id = user.Id,
-                Username = user.Username,
+                Username = user.UserName,
                 Email = user.Email,
                 FullName = user.FullName,
                 Address = user.Address,
-                Phone = user.Phone
+                Phone = user.PhoneNumber
             };
 
             return View(model);
@@ -103,30 +108,28 @@ namespace FoodOrderingSystem.Controllers
 
 
         [HttpPost]          //al submit del form del profilo
-        public IActionResult Profile(ProfileViewModel model)
+        public async Task<IActionResult> Profile(ProfileViewModel model)
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
-            if (userId == null) return RedirectToAction("Login");
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login");
 
             if (ModelState.IsValid)
             {
-                var user = _context.Users.Find(userId);                     //EF trova e crea user e lo registra nel changeTracker
-                if (user == null) return NotFound();
+                user.FullName = model.FullName;
+                user.Email = model.Email;
+                user.PhoneNumber = model.Phone;
+                user.Address = model.Address;
 
-                // Check if email is already taken by another user
-                var emailExists = _context.Users.Any(u => u.Email == model.Email && u.Id != userId);
-                if (emailExists)
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded)
                 {
-                    ModelState.AddModelError("Email", "Email is already registered to another account.");       
+                    foreach (var error in result.Errors)
+                    {
+                        ModelState.AddModelError("", error.Description);
+                    }
                     return View(model);
                 }
 
-                user.FullName = model.FullName;
-                user.Email = model.Email;
-                user.Phone = model.Phone;
-                user.Address = model.Address;
-
-                _context.SaveChanges();                                     //metodo di EF che genera ed esegue l’UPDATE nel database.
                 TempData["Success"] = "Profile updated successfully!";
                 return RedirectToAction("Profile");                         //manda all'action Profile() qui sopra
             }
@@ -134,26 +137,27 @@ namespace FoodOrderingSystem.Controllers
             return View(model);                                             //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
         }
 
-        [HttpPost]          
-        public IActionResult DeleteAccount()
+        //[HttpPost]          
+        //public IActionResult DeleteAccount()
+        //{
+        //    var userId = HttpContext.Session.GetInt32("UserId");
+        //    if (userId == null) return RedirectToAction("Login");
+
+        //    var user = _context.Users.Find(userId);
+        //    if (user == null) return NotFound();
+
+        //    _context.Remove(user);
+        //    _context.SaveChanges();
+        //    HttpContext.Session.Clear();
+
+        //    TempData["Success"] = "Profile removed successfully!";
+        //    return RedirectToAction("Login", "Account");                         
+        //}
+
+        public async Task<IActionResult> Logout()
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
-            if (userId == null) return RedirectToAction("Login");
-
-            var user = _context.Users.Find(userId);
-            if (user == null) return NotFound();
-
-            _context.Remove(user);
-            _context.SaveChanges();
-            HttpContext.Session.Clear();
-
-            TempData["Success"] = "Profile removed successfully!";
-            return RedirectToAction("Login", "Account");                         
-        }
-
-        public IActionResult Logout()
-        {
-            HttpContext.Session.Clear();
+            await _signInManager.SignOutAsync();
+            TempData["Success"] = "Logout successful!";
             return RedirectToAction("Index", "Home");
         }
 
@@ -162,33 +166,33 @@ namespace FoodOrderingSystem.Controllers
             return View();
         }
 
-        [HttpPost]
-        public IActionResult ChangePassword(ChangePasswordViewModel model)
-        {
-            var userId = HttpContext.Session.GetInt32("UserId");
-            if (userId == null) return RedirectToAction("Login");
+        //[HttpPost]
+        //public IActionResult ChangePassword(ChangePasswordViewModel model)
+        //{
+        //    var userId = HttpContext.Session.GetInt32("UserId");
+        //    if (userId == null) return RedirectToAction("Login");
 
-            if (ModelState.IsValid)
-            {
-                var user = _context.Users.Find(userId);                 //EF trova e crea user e lo registra nel changeTracker
-                if(user == null) return NotFound();
+        //    if (ModelState.IsValid)
+        //    {
+        //        var user = _context.Users.Find(userId);                 //EF trova e crea user e lo registra nel changeTracker
+        //        if(user == null) return NotFound();
 
-                if (_passwordHasher.VerifyHashedPassword(
-                      user,
-                      user.Password,
-                      model.CurrentPassword) == PasswordVerificationResult.Failed)
-                {           
-                    ModelState.AddModelError("CurrentPassword", "La tua password non è questa");
-                    return View(model); 
-                }
+        //        if (_passwordHasher.VerifyHashedPassword(
+        //              user,
+        //              user.Password,
+        //              model.CurrentPassword) == PasswordVerificationResult.Failed)
+        //        {           
+        //            ModelState.AddModelError("CurrentPassword", "La tua password non è questa");
+        //            return View(model); 
+        //        }
 
-                user.Password = model.NewPassword;                      // In production, hash the password!
-                _context.SaveChanges();                                   
+        //        user.Password = model.NewPassword;                      // In production, hash the password!
+        //        _context.SaveChanges();                                   
 
-                TempData["Success"] = "Password changed successfully!";
-                return RedirectToAction("Profile");
-            }
-            return View(model);                                         //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
-        }
+        //        TempData["Success"] = "Password changed successfully!";
+        //        return RedirectToAction("Profile");
+        //    }
+        //    return View(model);                                         //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
+        //}
     }
 }
