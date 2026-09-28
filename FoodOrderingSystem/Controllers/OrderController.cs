@@ -1,5 +1,6 @@
 ﻿
 using FoodOrderingSystem.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +12,12 @@ namespace FoodOrderingSystem.Controllers
     public class OrderController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public OrderController(ApplicationDbContext context)
+        public OrderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         //Ogni volta che un utente clicca su "Add to Cart", ASP.NET Core esegue questo metodo.
@@ -103,7 +106,7 @@ namespace FoodOrderingSystem.Controllers
         [HttpGet]
         public IActionResult Checkout()
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
+            var userId = Convert.ToInt32(_userManager.GetUserId(User));
             if (userId == null) return RedirectToAction("Login", "Account");
 
             var cart = GetCart();
@@ -116,17 +119,17 @@ namespace FoodOrderingSystem.Controllers
         [HttpPost]
         public IActionResult Checkout(string deliveryAddress, string phoneNumber)
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
+            var userId = Convert.ToInt32(_userManager.GetUserId(User));
             var cart = GetCart();
 
-            if (!userId.HasValue)
+            if (userId == null)
             {
                 return RedirectToAction("Login", "Account");
             }
 
             var order = new Order
             {
-                UserId = userId.Value,                                  //metto .Value perchè userId è nullable, UserId no e nonpuò prendere null come valore.
+                UserId = userId,                                  //metto .Value perchè userId è nullable, UserId no e nonpuò prendere null come valore.
                 DeliveryAddress = deliveryAddress,
                 PhoneNumber = phoneNumber,
                 TotalAmount = cart.Sum(c => c.Price * c.Quantity),
@@ -152,10 +155,9 @@ namespace FoodOrderingSystem.Controllers
         }
 
         //filtri (prendo parametri dagli input del form col name uguale al nome parametro che do qui) 
-        //(metto? alle date perchè di norma non possono essere null)
         public IActionResult MyOrders(string status, string sortOrder, DateTime? fromDate, DateTime? toDate)
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
+            var userId = Convert.ToInt32(_userManager.GetUserId(User));
             if (userId == null) return RedirectToAction("Login", "Account");
 
             var orders = _context.Orders

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Model;
 
 namespace FoodOrderingSystem.Controllers
 {
@@ -33,7 +34,7 @@ namespace FoodOrderingSystem.Controllers
             // 1. creato il RegisterViewModel
             // 2. copiato i dati del form nelle proprietà
             // 3. eseguito le validazioni
-            // 4. costruito il ModelState
+            // 4. costruito il ModelState -> IsValid è false quando uno o più dati ricevuti dal form non rispettano le regole di validazione del model/ViewModel.
             if (ModelState.IsValid)         
             {
                 var user = new ApplicationUser
@@ -137,22 +138,22 @@ namespace FoodOrderingSystem.Controllers
             return View(model);                                             //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
         }
 
-        //[HttpPost]          
-        //public IActionResult DeleteAccount()
-        //{
-        //    var userId = HttpContext.Session.GetInt32("UserId");
-        //    if (userId == null) return RedirectToAction("Login");
+        [HttpPost]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login");
 
-        //    var user = _context.Users.Find(userId);
-        //    if (user == null) return NotFound();
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                TempData["Error"] = "Impossibile eliminare l'account.";
+                return RedirectToAction("Profile");
+            }
 
-        //    _context.Remove(user);
-        //    _context.SaveChanges();
-        //    HttpContext.Session.Clear();
-
-        //    TempData["Success"] = "Profile removed successfully!";
-        //    return RedirectToAction("Login", "Account");                         
-        //}
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Login", "Account");
+        }
 
         public async Task<IActionResult> Logout()
         {
@@ -166,33 +167,25 @@ namespace FoodOrderingSystem.Controllers
             return View();
         }
 
-        //[HttpPost]
-        //public IActionResult ChangePassword(ChangePasswordViewModel model)
-        //{
-        //    var userId = HttpContext.Session.GetInt32("UserId");
-        //    if (userId == null) return RedirectToAction("Login");
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login");
 
-        //    if (ModelState.IsValid)
-        //    {
-        //        var user = _context.Users.Find(userId);                 //EF trova e crea user e lo registra nel changeTracker
-        //        if(user == null) return NotFound();
+            if (ModelState.IsValid)
+            {
+                var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+                if (!result.Succeeded)
+                {
+                    ModelState.AddModelError("CurrentPassword", "La tua password non è questa");
+                    return View(model);
+                }
 
-        //        if (_passwordHasher.VerifyHashedPassword(
-        //              user,
-        //              user.Password,
-        //              model.CurrentPassword) == PasswordVerificationResult.Failed)
-        //        {           
-        //            ModelState.AddModelError("CurrentPassword", "La tua password non è questa");
-        //            return View(model); 
-        //        }
-
-        //        user.Password = model.NewPassword;                      // In production, hash the password!
-        //        _context.SaveChanges();                                   
-
-        //        TempData["Success"] = "Password changed successfully!";
-        //        return RedirectToAction("Profile");
-        //    }
-        //    return View(model);                                         //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
-        //}
+                TempData["Success"] = "Password changed successfully!";
+                return RedirectToAction("Profile");
+            }
+            return View(model);                                         //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
+        }
     }
 }
