@@ -28,8 +28,17 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
 }).AddEntityFrameworkStores<ApplicationDbContext>()
   .AddDefaultTokenProviders();
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.SlidingExpiration = true;
+    options.LoginPath = "/Account/Login";
+});
+
 // Service layer
 builder.Services.AddScoped<IOrderService, OrderService>();  //quando qualcuno chiede IOrderService va a creare OrderService
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<SessionCartService>();
 
 var app = builder.Build();
 
@@ -61,11 +70,24 @@ app.MapControllerRoute(
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // Replace this line in Program.cs:
     context.Database.Migrate();
+    var roleManager = scope.ServiceProvider
+         .GetRequiredService<RoleManager<IdentityRole<int>>>();
 
-    // With this (for development only):
-    //context.Database.EnsureCreated();
+    if (!await roleManager.RoleExistsAsync("Admin"))
+    {
+        await roleManager.CreateAsync(new IdentityRole<int>("Admin"));
+    }
+
+    var userManager = scope.ServiceProvider
+        .GetRequiredService<UserManager<ApplicationUser>>();
+
+    var admin = await userManager.FindByEmailAsync("miaMail@example.com");
+
+    if (admin != null && !await userManager.IsInRoleAsync(admin, "Admin"))
+    {
+        await userManager.AddToRoleAsync(admin, "Admin");
+    }
 }
 
 app.Run();

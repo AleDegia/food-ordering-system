@@ -6,5 +6,7 @@ namespace FoodOrderingSystem.Models
     {
         public string? FullName { get; set; }
         public string? Address { get; set; }
+        
+        public Cart Cart { get; set; }
     }
 }

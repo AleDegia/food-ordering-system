@@ -15,6 +15,8 @@ namespace FoodOrderingSystem.Models
         public DbSet<Category> Categories { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<Cart> Carts { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,6 +34,11 @@ namespace FoodOrderingSystem.Models
                 new FoodItem { Id = 2, Name = "Pepperoni Pizza", Description = "Spicy pepperoni with cheese", Price = 14.99m, CategoryId = 1, ImageUrl = "/images/Pepperonipizza.jpg" },
                 new FoodItem { Id = 3, Name = "Cheeseburger", Description = "Beef patty with cheese", Price = 9.99m, CategoryId = 2, ImageUrl = "/images/Cheeseburger.jpg" }
             );
+
+             modelBuilder.Entity<Cart>()                // configura l'entità Cart
+                .HasOne(c => c.User)                    // ogni Cart ha un solo User
+                .WithOne(u => u.Cart)                   // ogni User ha al massimo un solo Cart
+                .HasForeignKey<Cart>(c => c.UserId);    // la FK è Cart.UserId
         }
     }
 }

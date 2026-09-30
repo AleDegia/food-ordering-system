@@ -1,10 +1,12 @@
 ﻿using FoodOrderingSystem.Models;
 using FoodOrderingSystem.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodOrderingSystem.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -28,7 +30,7 @@ namespace FoodOrderingSystem.Controllers
         }
         private bool IsAdmin()
         {
-            return HttpContext.Session.GetString("IsAdmin") == "True";
+            return User.IsInRole("Admin");
         }
         public IActionResult Dashboard()
         {

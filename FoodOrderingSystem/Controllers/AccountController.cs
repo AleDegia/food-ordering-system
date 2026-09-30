@@ -1,5 +1,6 @@
 ﻿using FoodOrderingSystem.Models;
 using FoodOrderingSystem.Models.ViewModels;
+using FoodOrderingSystem.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,13 +13,19 @@ namespace FoodOrderingSystem.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ApplicationDbContext _context;
+        private readonly SessionCartService _sessionCartService;
 
         public AccountController(
          UserManager<ApplicationUser> userManager,
-         SignInManager<ApplicationUser> signInManager)
+         SignInManager<ApplicationUser> signInManager,
+         ApplicationDbContext context,
+         SessionCartService sessionCartService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _context = context;
+            _sessionCartService = sessionCartService;
         }
 
         [HttpGet]
@@ -79,6 +86,39 @@ namespace FoodOrderingSystem.Controllers
                            model.Password, model.RememberMe, lockoutOnFailure: false);
             if (result.Succeeded)
             {
+                //OrderController controller = new OrderController();
+                var sessionCart = _sessionCartService.GetCart();
+                int userId = Convert.ToInt32(_userManager.GetUserId(User));
+
+                var loggedCart = _context.Carts
+                    .FirstOrDefault(c => c.UserId == userId);
+
+                if (loggedCart == null)
+                {
+                    loggedCart = new Cart { UserId = userId };
+                    _context.Carts.Add(loggedCart);
+                    _context.SaveChanges();
+                }
+                var existingItem = _context.CartItems.FirstOrDefault(i =>
+                      i.CartId == loggedCart.Id);
+                foreach (var sessionItem in sessionCart)
+                {
+                    if (existingItem != null && existingItem.FoodItemId == sessionItem.FoodItemId)
+                    {
+                        existingItem.Quantity +=
+                        sessionItem.Quantity;
+                    }
+                    else
+                    {
+                        _context.CartItems.Add(new CartItem
+                        {
+                            CartId = loggedCart.Id,
+                            FoodItemId = sessionItem.FoodItemId,
+                            Quantity = sessionItem.Quantity
+                        });
+                    }
+                }
+                _context.SaveChanges();
                 return RedirectToAction("Index", "Home");
             }
 
@@ -138,6 +178,8 @@ namespace FoodOrderingSystem.Controllers
             return View(model);                                             //se il ModelState non è valido La view riceve il ModelState con gli errori e li mostra automaticamente
         }
 
+
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> DeleteAccount()
         {
@@ -158,7 +200,6 @@ namespace FoodOrderingSystem.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            TempData["Success"] = "Logout successful!";
             return RedirectToAction("Index", "Home");
         }
 
@@ -167,6 +208,7 @@ namespace FoodOrderingSystem.Controllers
             return View();
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
         {

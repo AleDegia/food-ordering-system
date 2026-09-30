@@ -1,5 +1,6 @@
 ﻿
 using FoodOrderingSystem.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -20,44 +21,109 @@ namespace FoodOrderingSystem.Controllers
             _userManager = userManager;
         }
 
-        //Ogni volta che un utente clicca su "Add to Cart", ASP.NET Core esegue questo metodo.
-        public IActionResult AddToCart(int foodItemId, int quantity = 1)
-        {
-            List<CartItem> cart = GetCart();
-            var existingItem = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
 
-            //se prodotto c'è gia nel carrello aggiunge 1 ogni volta che lo riaggiungo al carrello
-            if (existingItem != null)                       
+        //Ogni volta che un utente clicca su "Add to Cart", ASP.NET Core esegue questo metodo.
+        public async Task<IActionResult> AddToCart(int foodItemId, int quantity = 1)
+        
+        {
+            if (!User.Identity?.IsAuthenticated == true)
             {
-                existingItem.Quantity += quantity;
+                List<SessionCartItem> cart = GetCart();
+                var existingItem = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
+
+                //se prodotto c'è gia nel carrello aggiunge 1 ogni volta che lo riaggiungo al carrello
+                if (existingItem != null)
+                {
+                    existingItem.Quantity += quantity;
+                }
+                else
+                {
+                    //trovo foodItem e lo aggiungo a cart sottoforma di CartItem
+                    var foodItem = _context.FoodItems.Find(foodItemId);
+                    cart.Add(new SessionCartItem
+                    {
+                        FoodItemId = foodItemId,
+                        Name = foodItem.Name,
+                        Price = foodItem.Price,
+                        Quantity = quantity,
+                        ImageUrl = foodItem.ImageUrl
+                    });
+                }
+
+                SaveCart(cart);
             }
             else
             {
-                //trovo foodItem e lo aggiungo a cart sottoforma di CartItem
-                var foodItem = _context.FoodItems.Find(foodItemId);
-                cart.Add(new CartItem
+                var user = await _userManager.GetUserAsync(User);
+                var cart = _context.Carts
+                    .Include(c => c.Items)
+                    .FirstOrDefault(c => c.UserId == user.Id);
+                if (cart != null)
                 {
-                    FoodItemId = foodItemId,
-                    Name = foodItem.Name,
-                    Price = foodItem.Price,
-                    Quantity = quantity,
-                    ImageUrl = foodItem.ImageUrl
-                });
-            }
+                    //controllo se esiste già un item con lo stesso foodItemId nel carrello dell'utente loggato
+                    var existingItem = cart.Items.FirstOrDefault(i => i.FoodItemId == foodItemId);
+                    if (existingItem != null)
+                    {
+                        existingItem.Quantity += quantity;
+                    }
+                    else 
+                    {
+                        cart.Items.Add(new CartItem                     //items valorizzato da Include(c => c.Items) sopra, quindi posso aggiungere un nuovo item al carrello dell'utente loggato
+                        {
+                            FoodItemId = foodItemId,
+                            Quantity = quantity
+                        });
+                    }
+                }
+                else
+                {
+                    cart = new Cart
+                    {
+                        UserId = user.Id
+                    };
 
-            SaveCart(cart);
+                    cart.Items.Add(new CartItem
+                    {
+                        FoodItemId = foodItemId,
+                        Quantity = quantity
+                    });
+
+                    // Il carrello è nuovo: solo in questo caso va aggiunto al contesto.
+                    _context.Carts.Add(cart);
+                }
+                await _context.SaveChangesAsync();
+            }
             return Redirect(Request.Headers["Referer"].ToString());
         }
 
         //quando clicco sul carrello
         public IActionResult Cart()
         {
-            // Retrieve items from session
-            List<CartItem> cart = GetCart();
+            List<SessionCartItem> cart;
+            if (!User.Identity?.IsAuthenticated == true)
+            {
+                // Retrieve items from session
+                cart = GetCart();
+            }
+            else
+            {
+                List<CartItem> items = _context.CartItems
+                   .Include(i => i.FoodItem)
+                   .Where(i => i.Cart.UserId == Convert.ToInt32(_userManager.GetUserId(User)))
+                   .ToList();
 
+                cart =
+                items.Select(i => new SessionCartItem
+                {
+                    FoodItemId = i.FoodItemId,
+                    Name = i.FoodItem.Name,
+                    Price = i.FoodItem.Price,
+                    Quantity = i.Quantity,
+                    ImageUrl = i.FoodItem.ImageUrl
+                }).ToList();
+            }
             // calcolo totale e lo passo a parte con ViewBag
             ViewBag.Total = cart.Sum(c => c.Price * c.Quantity);
-
             // Pass the list to the View
             return View(cart);
         }
@@ -65,15 +131,23 @@ namespace FoodOrderingSystem.Controllers
         [HttpPost]
         public IActionResult UpdateQuantity(int foodItemId, int quantity)
         {
-            List<CartItem> cart = GetCart();
-            var item = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
-
-            if (item != null && quantity > 0)
+            if (!User.Identity?.IsAuthenticated == true)
             {
-                item.Quantity = quantity;
-                SaveCart(cart);
-            }
+                List<SessionCartItem> cart = GetCart();
+                var item = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
 
+                if (item != null && quantity > 0)
+                {
+                    item.Quantity = quantity;
+                    SaveCart(cart);
+                }
+            }
+            else
+            {
+                var item = _context.CartItems.FirstOrDefault(i => i.FoodItem.Id == foodItemId && i.Cart.UserId == Convert.ToInt32(_userManager.GetUserId(User)));
+                item.Quantity = quantity;
+                _context.SaveChanges();
+            }
             return RedirectToAction("Cart");        //faccio richiesta HTTP all'action 'Cart'
         }
 
@@ -90,41 +164,64 @@ namespace FoodOrderingSystem.Controllers
 
             return RedirectToAction("Cart");
         }
-
-        private List<CartItem> GetCart()
+                    
+        public List<SessionCartItem> GetCart()
         {
             var cartJson = HttpContext.Session.GetString("Cart");           //cerca chiave cart nella sessione e ne prende il valore
-            return cartJson == null ? new List<CartItem>() :                //se non la trova (se è null) cra nuovo oggetto lista di tipo CartItem
-                JsonConvert.DeserializeObject<List<CartItem>>(cartJson);
+            return cartJson == null ? new List<SessionCartItem>() :                //se non la trova (se è null) cra nuovo oggetto lista di tipo CartItem
+                JsonConvert.DeserializeObject<List<SessionCartItem>>(cartJson);
         }
 
-        private void SaveCart(List<CartItem> cart)
+        private void SaveCart(List<SessionCartItem> cart)
         {
             HttpContext.Session.SetString("Cart", JsonConvert.SerializeObject(cart));
         }
 
+        [Authorize]
         [HttpGet]
         public IActionResult Checkout()
         {
-            var userId = Convert.ToInt32(_userManager.GetUserId(User));
-            if (userId == null) return RedirectToAction("Login", "Account");
+            if (!User.Identity?.IsAuthenticated == true)
+            {
+                var cart = GetCart();
+                if (!cart.Any()) return RedirectToAction("Index", "Menu");
 
-            var cart = GetCart();
-            if (!cart.Any()) return RedirectToAction("Index", "Menu");
-
-            ViewBag.Total = cart.Sum(c => c.Price * c.Quantity);
-            return View();
+                //ViewBag.Total = cart.Sum(c => c.Price * c.Quantity);
+                RedirectToAction("Login", "Account");
+                return View();
+            }
+            else
+            {
+                int userId = Convert.ToInt32(_userManager.GetUserId(User));
+                ViewBag.Total = _context.CartItems
+                    .Where(i=>i.Cart.UserId == userId)
+                    .Sum(i => i.Quantity * i.FoodItem.Price);
+                return View();
+            }
         }
 
+        [Authorize]
         [HttpPost]
-        public IActionResult Checkout(string deliveryAddress, string phoneNumber)
+        public async Task<IActionResult> Checkout(string deliveryAddress, string phoneNumber)
         {
-            var userId = Convert.ToInt32(_userManager.GetUserId(User));
-            var cart = GetCart();
-
-            if (userId == null)
-            {
+            var user = await _userManager.GetUserAsync(User);
+            if (user is null)
                 return RedirectToAction("Login", "Account");
+
+            //devo mantenere gli item nel carrello dell'utente non loggato se logga
+            int userId = user.Id;
+            var cart = GetCart();
+            if (cart == null)
+            {
+               Cart? loggedCart = _context.Carts.FirstOrDefault(c => c.UserId == userId);
+               cart = loggedCart?.Items.Select(i => new SessionCartItem
+               {
+                   FoodItemId = i.FoodItemId,
+                   Name = i.FoodItem.Name,
+                   Price = i.FoodItem.Price,
+                   Quantity = i.Quantity,
+                   ImageUrl = i.FoodItem.ImageUrl
+               }).ToList() ?? new List<SessionCartItem>();
             }
 
             var order = new Order
@@ -154,11 +251,15 @@ namespace FoodOrderingSystem.Controllers
             return View();
         }
 
+        [Authorize]
         //filtri (prendo parametri dagli input del form col name uguale al nome parametro che do qui) 
-        public IActionResult MyOrders(string status, string sortOrder, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> MyOrders(string status, string sortOrder, DateTime? fromDate, DateTime? toDate)
         {
-            var userId = Convert.ToInt32(_userManager.GetUserId(User));
-            if (userId == null) return RedirectToAction("Login", "Account");
+            var user = await _userManager.GetUserAsync(User);
+            if (user is null)
+                return RedirectToAction("Login", "Account");
+
+            int userId = user.Id;
 
             var orders = _context.Orders
                 .Include(o => o.OrderItems)
@@ -201,11 +302,14 @@ namespace FoodOrderingSystem.Controllers
             return View(orders.ToList());
         }
 
-
-        public IActionResult TrackOrder(int id)
+        [Authorize]
+        public async Task<IActionResult> TrackOrder(int id)
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
-            if (userId == null) return RedirectToAction("Login", "Account");
+            var user = await _userManager.GetUserAsync(User);
+            if (user is null)
+                return RedirectToAction("Login", "Account");
+
+            int userId = user.Id;
 
             var order = _context.Orders
                 .Include(o => o.OrderItems)
@@ -217,12 +321,15 @@ namespace FoodOrderingSystem.Controllers
             return View(order);
         }
 
+        [Authorize]
         [HttpPost]
-        public IActionResult CancelMyOrder(int orderId)
+        public async Task<IActionResult> CancelMyOrder(int orderId)
         {
-            var userId = HttpContext.Session.GetInt32("UserId");
-            if (userId == null) return RedirectToAction("Login", "Account");
+            var user = await _userManager.GetUserAsync(User);
+            if (user is null)
+                return RedirectToAction("Login", "Account");
 
+            int userId = user.Id;
             var order = _context.Orders.FirstOrDefault(o => o.Id == orderId && o.UserId == userId);
 
             if (order == null) return NotFound();
@@ -245,17 +352,30 @@ namespace FoodOrderingSystem.Controllers
         public IActionResult GetCartCount()
         {
             // Retrieve the Cart JSON string from the Session
-            var cartJson = HttpContext.Session.GetString("Cart");
             var count = 0;
-
-            // Check if the cart is not empty
-            if (!string.IsNullOrEmpty(cartJson))
+            if(!User.Identity?.IsAuthenticated == true)
             {
-                // Deserialize the JSON back into a List of CartItems
-                var cart = JsonConvert.DeserializeObject<List<CartItem>>(cartJson);
+                var cartJson = HttpContext.Session.GetString("Cart");
 
-                // Sum up the total quantity of all items in the cart
-                count = cart.Sum(c => c.Quantity);
+                // Check if the cart is not empty
+                if (!string.IsNullOrEmpty(cartJson))
+                {
+                    // Deserialize the JSON back into a List of CartItems
+                    var cart = JsonConvert.DeserializeObject<List<CartItem>>(cartJson);
+
+                    // Sum up the total quantity of all items in the cart
+                    count = cart.Sum(c => c.Quantity);
+                }
+            }
+            else
+            {
+                int userId = Convert.ToInt32(_userManager.GetUserId(User));
+                if (userId == 0)
+                    return Json(new { count = 0 });
+
+                count = _context.CartItems
+                  .Where(i => i.Cart.UserId == userId)
+                  .Sum(i => (int?)i.Quantity) ?? 0;
             }
 
             // Return the count as a JSON object for AJAX calls
@@ -264,7 +384,7 @@ namespace FoodOrderingSystem.Controllers
 
     }
 
-    public class CartItem
+    public class SessionCartItem
     {
         public int FoodItemId { get; set; }
         public string Name { get; set; }
