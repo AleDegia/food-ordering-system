@@ -153,8 +153,7 @@ Questo progetto nasce per approfondire:
 
 # Miglioramenti previsti
 
--   Password hashing           ✓
--   ASP.NET Core Identity
+-   ASP.NET Core Identity      ✓
 -   DTO e Service Layer
 -   Validazioni avanzate
 -   Unit Test
