@@ -211,9 +211,12 @@ namespace FoodOrderingSystem.Controllers
             //devo mantenere gli item nel carrello dell'utente non loggato se logga
             int userId = user.Id;
             var cart = GetCart();
-            if (cart == null)
+            if (user != null)
             {
-               Cart? loggedCart = _context.Carts.FirstOrDefault(c => c.UserId == userId);
+               Cart? loggedCart = _context.Carts
+                    .Include(c => c.Items)
+                    .ThenInclude(i => i.FoodItem)
+                    .FirstOrDefault(c => c.UserId == userId);
                cart = loggedCart?.Items.Select(i => new SessionCartItem
                {
                    FoodItemId = i.FoodItemId,
@@ -239,9 +242,11 @@ namespace FoodOrderingSystem.Controllers
             };
 
             _context.Orders.Add(order);
-            _context.SaveChanges();
-
+            
             HttpContext.Session.Remove("Cart");
+            var itemsToRemove = _context.CartItems.Where(i => userId == i.Cart.UserId).ToList();
+            _context.CartItems.RemoveRange(itemsToRemove);
+            _context.SaveChanges();    
             return RedirectToAction("OrderConfirmation", new { orderId = order.Id });           //reindirizzo all'action passandogli il parametro
         }
 
