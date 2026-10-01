@@ -1,5 +1,6 @@
 ﻿
 using FoodOrderingSystem.Models;
+using FoodOrderingSystem.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -14,84 +15,29 @@ namespace FoodOrderingSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-
-        public OrderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        private readonly ICartService _cartService;
+        private readonly SessionCartService _sessionCartService;
+        public OrderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ICartService cartService, SessionCartService sessionCartService)
         {
             _context = context;
             _userManager = userManager;
+            _cartService = cartService;
+            _sessionCartService = sessionCartService;
         }
 
 
         //Ogni volta che un utente clicca su "Add to Cart", ASP.NET Core esegue questo metodo.
         public async Task<IActionResult> AddToCart(int foodItemId, int quantity = 1)
-        
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
-                List<SessionCartItem> cart = GetCart();
-                var existingItem = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
-
-                //se prodotto c'è gia nel carrello aggiunge 1 ogni volta che lo riaggiungo al carrello
-                if (existingItem != null)
-                {
-                    existingItem.Quantity += quantity;
-                }
-                else
-                {
-                    //trovo foodItem e lo aggiungo a cart sottoforma di CartItem
-                    var foodItem = _context.FoodItems.Find(foodItemId);
-                    cart.Add(new SessionCartItem
-                    {
-                        FoodItemId = foodItemId,
-                        Name = foodItem.Name,
-                        Price = foodItem.Price,
-                        Quantity = quantity,
-                        ImageUrl = foodItem.ImageUrl
-                    });
-                }
-
-                SaveCart(cart);
+                var filledCart = _sessionCartService.AddItem(foodItemId, quantity);
+                SaveCart(filledCart);
             }
             else
             {
                 var user = await _userManager.GetUserAsync(User);
-                var cart = _context.Carts
-                    .Include(c => c.Items)
-                    .FirstOrDefault(c => c.UserId == user.Id);
-                if (cart != null)
-                {
-                    //controllo se esiste già un item con lo stesso foodItemId nel carrello dell'utente loggato
-                    var existingItem = cart.Items.FirstOrDefault(i => i.FoodItemId == foodItemId);
-                    if (existingItem != null)
-                    {
-                        existingItem.Quantity += quantity;
-                    }
-                    else 
-                    {
-                        cart.Items.Add(new CartItem                     //items valorizzato da Include(c => c.Items) sopra, quindi posso aggiungere un nuovo item al carrello dell'utente loggato
-                        {
-                            FoodItemId = foodItemId,
-                            Quantity = quantity
-                        });
-                    }
-                }
-                else
-                {
-                    cart = new Cart
-                    {
-                        UserId = user.Id
-                    };
-
-                    cart.Items.Add(new CartItem
-                    {
-                        FoodItemId = foodItemId,
-                        Quantity = quantity
-                    });
-
-                    // Il carrello è nuovo: solo in questo caso va aggiunto al contesto.
-                    _context.Carts.Add(cart);
-                }
-                await _context.SaveChangesAsync();
+                await _cartService.AddItem(user, foodItemId, quantity);
             }
             return Redirect(Request.Headers["Referer"].ToString());
         }
@@ -122,7 +68,6 @@ namespace FoodOrderingSystem.Controllers
                     ImageUrl = i.FoodItem.ImageUrl
                 }).ToList();
             }
-            // calcolo totale e lo passo a parte con ViewBag
             ViewBag.Total = cart.Sum(c => c.Price * c.Quantity);
             // Pass the list to the View
             return View(cart);

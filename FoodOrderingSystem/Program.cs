@@ -37,6 +37,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // Service layer
 builder.Services.AddScoped<IOrderService, OrderService>();  //quando qualcuno chiede IOrderService va a creare OrderService
+builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SessionCartService>();
 
