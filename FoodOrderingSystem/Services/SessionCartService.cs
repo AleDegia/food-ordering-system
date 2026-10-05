@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace FoodOrderingSystem.Services
 {
-    public class SessionCartService 
+    public class SessionCartService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ApplicationDbContext _context;
@@ -28,6 +28,12 @@ namespace FoodOrderingSystem.Services
               :
               JsonConvert.DeserializeObject<List<SessionCartItem>>(cartJson)
                 ?? new List<SessionCartItem>();
+        }
+
+        private void SaveCart(List<SessionCartItem> cart)
+        {
+            var session = _httpContextAccessor.HttpContext!.Session;
+            session.SetString("Cart", JsonConvert.SerializeObject(cart));
         }
 
         public List<SessionCartItem> AddItem(int foodItemId, int quantity)
@@ -54,6 +60,36 @@ namespace FoodOrderingSystem.Services
                 });
             }
             return cart;
+        }
+
+
+        public void UpdateQuantity(int foodItemId, int quantity)
+        {
+            if (quantity <= 0)
+                return;
+
+            List<SessionCartItem> cart = GetCart();
+            var item = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
+
+            if (item != null)
+            {
+                item.Quantity = quantity;
+                SaveCart(cart);
+            }
+        }
+
+
+        public void RemoveFromCart(int foodItemId)
+        {
+
+            var cart = GetCart();
+            var item = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
+
+            if (item != null)
+            {
+                cart.Remove(item);
+                SaveCart(cart);
+            }
         }
     }
 }

@@ -49,14 +49,12 @@ namespace FoodOrderingSystem.Controllers
             if (!User.Identity?.IsAuthenticated == true)
             {
                 // Retrieve items from session
-                cart = GetCart();
+                cart = _sessionCartService.GetCart();
             }
             else
             {
-                List<CartItem> items = _context.CartItems
-                   .Include(i => i.FoodItem)
-                   .Where(i => i.Cart.UserId == Convert.ToInt32(_userManager.GetUserId(User)))
-                   .ToList();
+                int userId = Convert.ToInt32(_userManager.GetUserId(User));
+                var items = _cartService.GetItems(userId);
 
                 cart =
                 items.Select(i => new SessionCartItem
@@ -78,35 +76,27 @@ namespace FoodOrderingSystem.Controllers
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
-                List<SessionCartItem> cart = GetCart();
-                var item = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
-
-                if (item != null && quantity > 0)
-                {
-                    item.Quantity = quantity;
-                    SaveCart(cart);
-                }
+                _sessionCartService.UpdateQuantity(foodItemId, quantity);
             }
             else
             {
-                var item = _context.CartItems.FirstOrDefault(i => i.FoodItem.Id == foodItemId && i.Cart.UserId == Convert.ToInt32(_userManager.GetUserId(User)));
-                item.Quantity = quantity;
-                _context.SaveChanges();
+                int userId = Convert.ToInt32(_userManager.GetUserId(User));
+                _cartService.UpdateQuantity(userId, foodItemId, quantity);
             }
             return RedirectToAction("Cart");        //faccio richiesta HTTP all'action 'Cart'
         }
 
         public IActionResult RemoveFromCart(int foodItemId)
         {
-            var cart = GetCart();
-            var item = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
-
-            if (item != null)
+            if (!User.Identity?.IsAuthenticated == true)
             {
-                cart.Remove(item);
-                SaveCart(cart);
+                _sessionCartService.RemoveFromCart(foodItemId);
+            } 
+            else
+            {
+                int userId = Convert.ToInt32(_userManager.GetUserId(User));
+                _cartService.RemoveItemFromCart(userId, foodItemId);
             }
-
             return RedirectToAction("Cart");
         }
                     
@@ -128,7 +118,7 @@ namespace FoodOrderingSystem.Controllers
         {
             if (!User.Identity?.IsAuthenticated == true)
             {
-                var cart = GetCart();
+                var cart = _sessionCartService.GetCart();
                 if (!cart.Any()) return RedirectToAction("Index", "Menu");
 
                 //ViewBag.Total = cart.Sum(c => c.Price * c.Quantity);
@@ -138,9 +128,7 @@ namespace FoodOrderingSystem.Controllers
             else
             {
                 int userId = Convert.ToInt32(_userManager.GetUserId(User));
-                ViewBag.Total = _context.CartItems
-                    .Where(i=>i.Cart.UserId == userId)
-                    .Sum(i => i.Quantity * i.FoodItem.Price);
+                ViewBag.Total = _cartService.GetTotal(userId);
                 return View();
             }
         }
@@ -155,43 +143,13 @@ namespace FoodOrderingSystem.Controllers
 
             //devo mantenere gli item nel carrello dell'utente non loggato se logga
             int userId = user.Id;
-            var cart = GetCart();
-            if (user != null)
-            {
-               Cart? loggedCart = _context.Carts
-                    .Include(c => c.Items)
-                    .ThenInclude(i => i.FoodItem)
-                    .FirstOrDefault(c => c.UserId == userId);
-               cart = loggedCart?.Items.Select(i => new SessionCartItem
-               {
-                   FoodItemId = i.FoodItemId,
-                   Name = i.FoodItem.Name,
-                   Price = i.FoodItem.Price,
-                   Quantity = i.Quantity,
-                   ImageUrl = i.FoodItem.ImageUrl
-               }).ToList() ?? new List<SessionCartItem>();
-            }
+            var order = await _cartService.CreateOrderFromCartAsync(userId, deliveryAddress, phoneNumber);
 
-            var order = new Order
-            {
-                UserId = userId,                                  //metto .Value perchè userId è nullable, UserId no e nonpuò prendere null come valore.
-                DeliveryAddress = deliveryAddress,
-                PhoneNumber = phoneNumber,
-                TotalAmount = cart.Sum(c => c.Price * c.Quantity),
-                OrderItems = cart.Select(c => new OrderItem             //Select è un LINQ che trasforma ogni CartItem della lista in un nuovo OrderItem
-                {
-                    FoodItemId = c.FoodItemId,
-                    Quantity = c.Quantity,
-                    UnitPrice = c.Price
-                }).ToList()                                             //trasformo in lista di OrderItem
-            };
+            if (order == null)
+                return RedirectToAction("Cart");
 
-            _context.Orders.Add(order);
-            
             HttpContext.Session.Remove("Cart");
-            var itemsToRemove = _context.CartItems.Where(i => userId == i.Cart.UserId).ToList();
-            _context.CartItems.RemoveRange(itemsToRemove);
-            _context.SaveChanges();    
+            //_cartService.ClearCart(userId);          
             return RedirectToAction("OrderConfirmation", new { orderId = order.Id });           //reindirizzo all'action passandogli il parametro
         }
 
