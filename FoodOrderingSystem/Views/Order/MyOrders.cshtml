@@ -21,7 +21,7 @@
                     <label class="form-label">Status</label>
                     <!-- Aggiungo dentro il <select> un’<option> per ogni elemento di ViewBag.StatusList.-->
                     <select name="status" class="form-select" asp-items="@(new SelectList(ViewBag.StatusList, ViewBag.CurrentStatus))">
-                        <option value="All">All Status</option>
+                        <!--<option value="All">All Status</option>-->
                     </select>
                 </div>
                 <div class="col-md-2">

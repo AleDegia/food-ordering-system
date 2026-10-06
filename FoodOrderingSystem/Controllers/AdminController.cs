@@ -1,6 +1,7 @@
 ﻿using FoodOrderingSystem.Models;
 using FoodOrderingSystem.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -353,55 +354,20 @@ namespace FoodOrderingSystem.Controllers
             ViewBag.TotalSortParam = sortOrder == "total_asc" ? "total_desc" : "total_asc";
             ViewBag.StatusSortParam = sortOrder == "status" ? "status_desc" : "status";
 
-            var orders = _context.Orders
-                .Include(o => o.User)
-                .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.FoodItem)
-                .AsQueryable();                                       //per poter aggiungere ulteriori istruzioni alla query in seguito (ad es di filtraggio e ordinamento)
-
-            // Filter by Status
             if (!string.IsNullOrEmpty(status) && status != "All")
-            {
-                if (ValidOrderStatuses.Contains(status))
-                {
-                    orders = orders.Where(o => o.Status == status);
-                    ViewBag.CurrentStatus = status;
-                }
-            }
+                ViewBag.CurrentStatus = status;
 
-            // Filter by Customer Name
             if (!string.IsNullOrEmpty(searchString))
-            {
-                orders = orders.Where(o =>                              //aggiungo filtro alla query di prima, che già includeva User e OrderItems
-                    o.User.FullName.Contains(searchString) ||
-                    o.User.UserName.Contains(searchString) ||
-                    o.User.Email.Contains(searchString));
                 ViewBag.CurrentSearch = searchString;
-            }
 
-            // Filter by Date Range
             if (fromDate.HasValue)
-            {
-                orders = orders.Where(o => o.OrderDate >= fromDate.Value);
                 ViewBag.FromDate = fromDate.Value.ToString("yyyy-MM-dd");
-            }
-            if (toDate.HasValue)
-            {
-                orders = orders.Where(o => o.OrderDate <= toDate.Value.AddDays(1));
-                ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
-            }
 
-            // Sorting
-            orders = sortOrder switch
-            {
-                "date_asc" => orders.OrderBy(o => o.OrderDate),
-                "date_desc" => orders.OrderByDescending(o => o.OrderDate),
-                "total_asc" => orders.OrderBy(o => o.TotalAmount),
-                "total_desc" => orders.OrderByDescending(o => o.TotalAmount),
-                "status" => orders.OrderBy(o => o.Status),
-                "status_desc" => orders.OrderByDescending(o => o.Status),
-                _ => orders.OrderByDescending(o => o.OrderDate) // default
-            };
+            if (toDate.HasValue)
+                ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
+
+            var orders = _orderService.GetFilteredOrders(status, searchString, fromDate, toDate, sortOrder);                         
+
 
             // Status counts for dashboard stats
             ViewBag.PendingCount = _context.Orders.Count(o => o.Status == "Pending");
@@ -418,36 +384,31 @@ namespace FoodOrderingSystem.Controllers
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");       //rimanda a Homecontroller, actionResult Index, se non sono admin
 
-            var order = _context.Orders
-                .Include(o => o.User)                                       //uso navigation property per includere i dettagli dell'utente associato all'ordine (x ogni ordine voglio vedere anche i dettagli dell'utente che l'ha fatto)
-                .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.FoodItem)
-                .FirstOrDefault(o => o.Id == id);
-
+            var order = _orderService.GetOrderDetails(id);
             if (order == null) return NotFound();
 
             //ritorno view 
             return View("~/Views/Order/OrderDetails.cshtml", order);
         }
 
+
+
         [HttpPost]
         public IActionResult UpdateOrderStatus(int orderId, string status)
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
 
-            var order = _context.Orders.Find(orderId);
-            if (order == null) return NotFound();
+            var result = _orderService.UpdateOrderStatus(orderId, status);
+            if (result.Code == OperationResultCode.NotFound)
+                return NotFound();
 
-            if (!ValidOrderStatuses.Contains(status))
+            if (!result.IsSuccess)
             {
-                TempData["Error"] = "Invalid order status.";
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("Orders");
             }
 
-            order.Status = status;
-            _context.SaveChanges();
-
-            TempData["Success"] = $"Order #{orderId} status updated to {status}";
+            TempData["Success"] = $"Order #{orderId} status updated to { status}";
             return RedirectToAction("Orders");
         }
 

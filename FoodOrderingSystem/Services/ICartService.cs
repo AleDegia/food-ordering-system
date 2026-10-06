@@ -11,5 +11,6 @@ public interface ICartService
     void RemoveItemFromCart(int userId, int foodItemId);
     void ClearCart(int userId);
     decimal GetTotal(int userId);
+    int GetCount(int userId);
     Task<Order?> CreateOrderFromCartAsync(int userId,string deliveryAddress,string phoneNumber);
 }

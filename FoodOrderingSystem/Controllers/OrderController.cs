@@ -17,12 +17,14 @@ namespace FoodOrderingSystem.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ICartService _cartService;
         private readonly SessionCartService _sessionCartService;
-        public OrderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ICartService cartService, SessionCartService sessionCartService)
+        private readonly IOrderService _orderService;
+        public OrderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ICartService cartService, SessionCartService sessionCartService, IOrderService orderService)
         {
             _context = context;
             _userManager = userManager;
             _cartService = cartService;
             _sessionCartService = sessionCartService;
+            _orderService = orderService;
         }
 
 
@@ -168,46 +170,26 @@ namespace FoodOrderingSystem.Controllers
                 return RedirectToAction("Login", "Account");
 
             int userId = user.Id;
+            var orders = _orderService.GetMyOrders(status, sortOrder, fromDate, toDate, userId);
 
-            var orders = _context.Orders
-                .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.FoodItem)
-                .Where(o => o.UserId == userId)
-                .AsQueryable();
-
-            // Filter by Status
             if (!string.IsNullOrEmpty(status) && status != "All")
             {
-                orders = orders.Where(o => o.Status == status);
                 ViewBag.CurrentStatus = status;
             }
 
-            // Filter by Date Range
             if (fromDate.HasValue)
             {
-                orders = orders.Where(o => o.OrderDate >= fromDate.Value);
                 ViewBag.FromDate = fromDate.Value.ToString("yyyy-MM-dd");
             }
             if (toDate.HasValue)
             {
-                // Add 1 day to include the entire 'To' date
-                orders = orders.Where(o => o.OrderDate <= toDate.Value.AddDays(1));
                 ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
             }
 
-            // Sorting Logic (mando a frontend la lista degli ordini gia ordinata)
             ViewBag.CurrentSort = sortOrder;
-            orders = sortOrder switch
-            {
-                "date_asc" => orders.OrderBy(o => o.OrderDate),
-                "total_desc" => orders.OrderByDescending(o => o.TotalAmount),
-                "total_asc" => orders.OrderBy(o => o.TotalAmount),
-                _ => orders.OrderByDescending(o => o.OrderDate) // _ è il default dello switch compatto: newest first
-            };
-
             ViewBag.StatusList = new List<string> { "All", "Pending", "Confirmed", "Preparing", "OutForDelivery", "Delivered", "Cancelled" };
 
-            return View(orders.ToList());
+            return View(orders);
         }
 
         [Authorize]
@@ -219,10 +201,7 @@ namespace FoodOrderingSystem.Controllers
 
             int userId = user.Id;
 
-            var order = _context.Orders
-                .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.FoodItem)
-                .FirstOrDefault(o => o.Id == id && o.UserId == userId);             //Esegue
+            var order = _orderService.GetUserOrderDetails(id, userId);
 
             if (order == null) return NotFound();
 
@@ -231,26 +210,24 @@ namespace FoodOrderingSystem.Controllers
 
         [Authorize]
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelMyOrder(int orderId)
         {
             var user = await _userManager.GetUserAsync(User);
+
             if (user is null)
                 return RedirectToAction("Login", "Account");
 
-            int userId = user.Id;
-            var order = _context.Orders.FirstOrDefault(o => o.Id == orderId && o.UserId == userId);
+            var result = _orderService.CancelUserOrder(orderId, user.Id);
 
-            if (order == null) return NotFound();
+            if (result.Code == OperationResultCode.NotFound)
+                return NotFound();
 
-            // Only allow cancellation if status is Pending or Confirmed
-            if (order.Status != "Pending" && order.Status != "Confirmed")
+            if (!result.IsSuccess)
             {
-                TempData["Error"] = "Order cannot be cancelled at this stage!";
+                TempData["Error"] = result.ErrorMessage;
                 return RedirectToAction("TrackOrder", new { id = orderId });
             }
-
-            order.Status = "Cancelled";
-            _context.SaveChanges();
 
             TempData["Success"] = "Order cancelled successfully!";
             return RedirectToAction("MyOrders");
@@ -260,36 +237,20 @@ namespace FoodOrderingSystem.Controllers
         public IActionResult GetCartCount()
         {
             // Retrieve the Cart JSON string from the Session
-            var count = 0;
-            if(!User.Identity?.IsAuthenticated == true)
+            int count;
+            if(User.Identity?.IsAuthenticated == true)
             {
-                var cartJson = HttpContext.Session.GetString("Cart");
-
-                // Check if the cart is not empty
-                if (!string.IsNullOrEmpty(cartJson))
-                {
-                    // Deserialize the JSON back into a List of CartItems
-                    var cart = JsonConvert.DeserializeObject<List<CartItem>>(cartJson);
-
-                    // Sum up the total quantity of all items in the cart
-                    count = cart.Sum(c => c.Quantity);
-                }
+                int userId = Convert.ToInt32(_userManager.GetUserId(User));
+                count = _cartService.GetCount(userId);
             }
             else
             {
-                int userId = Convert.ToInt32(_userManager.GetUserId(User));
-                if (userId == 0)
-                    return Json(new { count = 0 });
-
-                count = _context.CartItems
-                  .Where(i => i.Cart.UserId == userId)
-                  .Sum(i => (int?)i.Quantity) ?? 0;
+                count = _sessionCartService.GetCount();
             }
 
             // Return the count as a JSON object for AJAX calls
             return Json(new { count });
         }
-
     }
 
     public class SessionCartItem

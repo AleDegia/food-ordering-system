@@ -91,5 +91,10 @@ namespace FoodOrderingSystem.Services
                 SaveCart(cart);
             }
         }
+
+        public int GetCount()
+        {
+            return GetCart().Sum(item => item.Quantity);
+        }
     }
 }

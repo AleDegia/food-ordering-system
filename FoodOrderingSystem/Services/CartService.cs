@@ -84,7 +84,7 @@ namespace FoodOrderingSystem.Services
                 {
                     FoodItemId = i.FoodItemId,
                     Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice
+                    UnitPrice = i.FoodItem.Price
                 }).ToList()
             };
 
@@ -137,6 +137,13 @@ namespace FoodOrderingSystem.Services
             return _context.CartItems
                 .Where(i => i.Cart.UserId == userId)
                 .Sum(i => i.Quantity * i.FoodItem.Price);
+        }
+
+        public int GetCount(int userId)
+        {
+            return _context.CartItems
+                .Where(i => i.Cart.UserId == userId)
+                .Sum(i => i.Quantity);
         }
     }
 }
