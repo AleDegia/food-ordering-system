@@ -29,6 +29,8 @@ namespace FoodOrderingSystem.Controllers
 
 
         //Ogni volta che un utente clicca su "Add to Cart", ASP.NET Core esegue questo metodo.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart(int foodItemId, int quantity = 1)
         {
             if (!User.Identity?.IsAuthenticated == true)
@@ -74,6 +76,7 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult UpdateQuantity(int foodItemId, int quantity)
         {
             if (!User.Identity?.IsAuthenticated == true)
@@ -88,6 +91,8 @@ namespace FoodOrderingSystem.Controllers
             return RedirectToAction("Cart");        //faccio richiesta HTTP all'action 'Cart'
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult RemoveFromCart(int foodItemId)
         {
             if (!User.Identity?.IsAuthenticated == true)
@@ -137,6 +142,7 @@ namespace FoodOrderingSystem.Controllers
 
         [Authorize]
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Checkout(string deliveryAddress, string phoneNumber)
         {
             var user = await _userManager.GetUserAsync(User);

@@ -394,6 +394,7 @@ namespace FoodOrderingSystem.Controllers
 
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult UpdateOrderStatus(int orderId, string status)
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
@@ -413,6 +414,7 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ConfirmOrder(int orderId)
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");
@@ -433,6 +435,7 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult CancelOrder(int orderId)
         {
             if (!IsAdmin()) return RedirectToAction("Index", "Home");

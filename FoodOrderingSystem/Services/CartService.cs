@@ -101,7 +101,8 @@ namespace FoodOrderingSystem.Services
             if (quantity <= 0)
                 return; // non faccio nemmeno la query al DB
 
-            var item = _context.CartItems.FirstOrDefault(i => i.FoodItem.Id == foodItemId && i.Cart.UserId == userId);
+            var item = _context.CartItems.FirstOrDefault(i =>
+                i.FoodItemId == foodItemId && i.Cart.UserId == userId);
             if (item != null)
             {
                 item.Quantity = quantity;
@@ -112,8 +113,9 @@ namespace FoodOrderingSystem.Services
 
         public void RemoveItemFromCart(int userId, int foodItemId)
         {
-            var item = _context.CartItems.FirstOrDefault(i => i.FoodItemId == foodItemId);
-            if (item != null && userId != 0)
+            var item = _context.CartItems.FirstOrDefault(i =>
+                i.FoodItemId == foodItemId && i.Cart.UserId == userId);
+            if (item != null)
             {
                 _context.CartItems.Remove(item);
                 _context.SaveChanges();

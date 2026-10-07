@@ -15,6 +15,7 @@
                     </div>
 
                     <form action="/Order/Checkout" method="post">
+                        @Html.AntiForgeryToken()
                         <div class="mb-3">
                             <label class="form-label">Delivery Address</label>
                             <textarea name="deliveryAddress" class="form-control" rows="3" required></textarea>

@@ -35,6 +35,7 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             // Prima di entrare qui, ASP.NET ha già:
@@ -80,6 +81,7 @@ namespace FoodOrderingSystem.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
             var result = await _signInManager.PasswordSignInAsync(model.Username,
@@ -148,7 +150,9 @@ namespace FoodOrderingSystem.Controllers
         }
 
 
+        [Authorize]
         [HttpPost]          //al submit del form del profilo
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Profile(ProfileViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -181,6 +185,7 @@ namespace FoodOrderingSystem.Controllers
 
         [Authorize]
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteAccount()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -197,6 +202,9 @@ namespace FoodOrderingSystem.Controllers
             return RedirectToAction("Login", "Account");
         }
 
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
@@ -210,6 +218,7 @@ namespace FoodOrderingSystem.Controllers
 
         [Authorize]
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);

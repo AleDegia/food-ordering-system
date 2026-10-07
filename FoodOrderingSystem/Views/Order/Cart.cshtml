@@ -32,14 +32,18 @@
                                     <div class="d-flex align-items-center">
                                         <!-- Form per inviare al controller la nuova quantità e tramite campo nascosto il FoodItemId del prodotto -->
                                         <form action="/Order/UpdateQuantity" method="post" class="d-flex align-items-center me-3">
+                                            @Html.AntiForgeryToken()
                                             <input type="hidden" name="foodItemId" value="@item.FoodItemId" />
                                             <input type="number" name="quantity" value="@item.Quantity" min="1" class="form-control me-2" style="width: 70px;" />
                                             <button type="submit" class="btn btn-outline-secondary btn-sm">Update</button>
                                         </form>
-                                        <!-- Delete Item Link with Query String -->
-                                        <a href="/Order/RemoveFromCart?foodItemId=@item.FoodItemId" class="btn btn-danger btn-sm">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
+                                        <form action="/Order/RemoveFromCart" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="foodItemId" value="@item.FoodItemId" />
+                                            <button type="submit" class="btn btn-danger btn-sm" aria-label="Remove @item.Name from cart">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
