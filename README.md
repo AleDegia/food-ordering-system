@@ -154,8 +154,8 @@ Questo progetto nasce per approfondire:
 # Miglioramenti previsti
 
 -   ASP.NET Core Identity      ✓
--   DTO e Service Layer
--   Validazioni avanzate
+-   DTO e Service Layer        ✓
+-   Validazioni avanzate       ✓
 -   Unit Test
 -   Docker
 -   CI/CD
