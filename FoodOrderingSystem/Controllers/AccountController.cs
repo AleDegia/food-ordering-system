@@ -101,10 +101,11 @@ namespace FoodOrderingSystem.Controllers
                     _context.Carts.Add(loggedCart);
                     _context.SaveChanges();
                 }
-                var existingItem = _context.CartItems.FirstOrDefault(i =>
-                      i.CartId == loggedCart.Id);
+                   
                 foreach (var sessionItem in sessionCart)
                 {
+                    var existingItem = _context.CartItems.FirstOrDefault(i =>
+                        i.CartId == loggedCart.Id && i.FoodItemId == sessionItem.FoodItemId);       //vado a prendere il primo cartItem nella tabella dei cartItems per cui il carrello del prodotto sia quello dell'utente loggato e il tipo di cibo sia quello del sessionitem
                     if (existingItem != null && existingItem.FoodItemId == sessionItem.FoodItemId)
                     {
                         existingItem.Quantity +=
@@ -121,6 +122,7 @@ namespace FoodOrderingSystem.Controllers
                     }
                 }
                 _context.SaveChanges();
+                HttpContext.Session.Remove("Cart");
                 return RedirectToAction("Index", "Home");
             }
 
