@@ -112,29 +112,20 @@ Entità principali:
 
 ------------------------------------------------------------------------
 
-# Installazione
+#### Prova il progetto in locale
 
-## 1. Clonare il repository
+  Il progetto può essere avviato tramite Docker
+  Desktop, senza installare localmente .NET SDK o
+  SQL Server.
 
-``` bash
-git clone https://github.com/AleDegia/food-ordering-system.git
-```
-
-## 2. Configurare la connection string
-
-Aggiornare `appsettings.json` con il proprio server SQL Server.
-
-## 3. Applicare le migrazioni
-
-``` bash
-dotnet ef database update
-```
-
-## 4. Avviare il progetto
-
-``` bash
-dotnet run
-```
+  ```powershell
+  git clone
+  https://github.com/AleDegia/food-ordering-system.git
+  cd food-ordering-system
+  Copy-Item .env.example .env
+  docker compose up --build
+  ```
+  Al termine dell'avvio, apri http://localhost:8080
 
 ------------------------------------------------------------------------
 
@@ -156,7 +147,7 @@ Questo progetto nasce per approfondire:
 -   ASP.NET Core Identity      ✓
 -   DTO e Service Layer        ✓
 -   Validazioni avanzate       ✓
--   Unit Test
--   Docker
+-   Unit Test    ✓
+-   Docker       ✓
 -   CI/CD
 -   Deploy su Azure
