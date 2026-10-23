@@ -22,5 +22,8 @@ namespace FoodOrderingSystem.Models
         public Category? Category { get; set; }                  // Navigation Property, loaded separately from the form
 
         public bool IsAvailable { get; set; } = true;
+
+        [Range(0, int.MaxValue)]
+        public int StockQuantity { get; set; }
     }
 }

@@ -88,6 +88,12 @@ namespace FoodOrderingSystem.Services
                 }).ToList()
             };
 
+            foreach(var orderItem in cartItems)
+            {
+                
+            }
+            
+
             _context.Orders.Add(order);
             _context.CartItems.RemoveRange(cartItems);
             await _context.SaveChangesAsync();

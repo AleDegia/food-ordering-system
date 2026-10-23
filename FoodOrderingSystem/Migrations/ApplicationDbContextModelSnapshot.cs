@@ -216,6 +216,9 @@ namespace FoodOrderingSystem.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
@@ -231,7 +234,8 @@ namespace FoodOrderingSystem.Migrations
                             ImageUrl = "/images/Margheritapizza.jpg",
                             IsAvailable = true,
                             Name = "Margherita Pizza",
-                            Price = 12.99m
+                            Price = 12.99m,
+                            StockQuantity = 0
                         },
                         new
                         {
@@ -241,7 +245,8 @@ namespace FoodOrderingSystem.Migrations
                             ImageUrl = "/images/Pepperonipizza.jpg",
                             IsAvailable = true,
                             Name = "Pepperoni Pizza",
-                            Price = 14.99m
+                            Price = 14.99m,
+                            StockQuantity = 0
                         },
                         new
                         {
@@ -251,7 +256,8 @@ namespace FoodOrderingSystem.Migrations
                             ImageUrl = "/images/Cheeseburger.jpg",
                             IsAvailable = true,
                             Name = "Cheeseburger",
-                            Price = 9.99m
+                            Price = 9.99m,
+                            StockQuantity = 0
                         });
                 });
 

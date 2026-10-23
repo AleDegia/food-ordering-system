@@ -234,6 +234,7 @@ namespace FoodOrderingSystem.Controllers
             existingItem.Price = item.Price;
             existingItem.CategoryId = item.CategoryId;
             existingItem.IsAvailable = item.IsAvailable;
+            existingItem.StockQuantity = item.StockQuantity;
 
             var oldImageUrl = existingItem.ImageUrl;
             if (imageFile is { Length: > 0 })
