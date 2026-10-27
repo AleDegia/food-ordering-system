@@ -14,15 +14,34 @@ namespace FoodOrderingSystem.Services
         {
             _context = context;
         }
-        public async Task AddItem(ApplicationUser user, int foodItemId, int quantity)
+        public async Task<OperationResult> AddItem(ApplicationUser user, int foodItemId, int quantity)
         {
             var cart = _context.Carts
                     .Include(c => c.Items)
                     .FirstOrDefault(c => c.UserId == user.Id);
+            var foodItem = await _context.FoodItems.FindAsync(foodItemId);
+
+            if (foodItem is null)
+                return OperationResult.NotFound("Food item not found.");
+
+            if (!foodItem.IsAvailable)
+                return OperationResult.OutOfStock("This item is currently unavailable.");
+
+            if (quantity <= 0)
+                return OperationResult.InvalidRequest("Quantity must be at least 1.");
+
             if (cart != null)
             {
                 //controllo se esiste già un item con lo stesso foodItemId nel carrello dell'utente loggato
                 var existingItem = cart.Items.FirstOrDefault(i => i.FoodItemId == foodItemId);
+
+                var requestedQuantity = (existingItem?.Quantity ?? 0) + quantity;
+                if (foodItem.StockQuantity < requestedQuantity)
+                {
+                    return OperationResult.OutOfStock(
+                        $"Only {foodItem.StockQuantity} item(s) are available.");
+                }
+
                 if (existingItem != null)
                 {
                     existingItem.Quantity += quantity;
@@ -38,6 +57,12 @@ namespace FoodOrderingSystem.Services
             }
             else
             {
+                if (foodItem.StockQuantity < quantity)
+                {
+                    return OperationResult.OutOfStock(
+                        $"Only {foodItem.StockQuantity} item(s) are available.");
+                }
+
                 cart = new Cart
                 {
                     UserId = user.Id
@@ -48,11 +73,13 @@ namespace FoodOrderingSystem.Services
                     FoodItemId = foodItemId,
                     Quantity = quantity,
                 });
+                
 
                 // Il carrello è nuovo: solo in questo caso va aggiunto al contesto.
                 _context.Carts.Add(cart);
             }
             await _context.SaveChangesAsync();
+            return OperationResult.Success();
         }
 
 
@@ -88,24 +115,47 @@ namespace FoodOrderingSystem.Services
                 }).ToList()
             };
 
-            foreach(var orderItem in cartItems)
+            foreach (var cartItem in cartItems)
             {
-                
+                var foodItem = cartItem.FoodItem;
+
+                if (foodItem is null ||
+                    !foodItem.IsAvailable ||
+                    cartItem.Quantity <= 0 ||
+                    foodItem.StockQuantity < cartItem.Quantity)
+                {
+                    return null;                                            
+                }
             }
-            
+
+            // Solo dopo aver verificato tutti i prodotti:
+            foreach (var cartItem in cartItems)
+            {
+                cartItem.FoodItem.StockQuantity -= cartItem.Quantity;
+            }
+
 
             _context.Orders.Add(order);
             _context.CartItems.RemoveRange(cartItems);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();                                                                       //salva anche la modifica a FoodItem, insieme all’ordine e alla rimozione dei CartItem
             return order;
         }
 
 
 
-        public void UpdateQuantity(int userId, int foodItemId, int quantity)
+        public OperationResult UpdateQuantity(int userId, int foodItemId, int quantity)
         {
             if (quantity <= 0)
-                return; // non faccio nemmeno la query al DB
+                return OperationResult.InvalidRequest("Quantity must be at least 1."); // non faccio nemmeno la query al DB
+            
+            var foodItem = _context.FoodItems.FirstOrDefault(f => f.Id == foodItemId);
+
+            if (foodItem is null ||
+                !foodItem.IsAvailable ||
+                foodItem.StockQuantity < quantity)
+            {
+                return OperationResult.OutOfStock("This item is currently unavailable or we do not have enouth stock.");
+            }
 
             var item = _context.CartItems.FirstOrDefault(i =>
                 i.FoodItemId == foodItemId && i.Cart.UserId == userId);
@@ -114,6 +164,7 @@ namespace FoodOrderingSystem.Services
                 item.Quantity = quantity;
                 _context.SaveChanges();
             }
+            return OperationResult.Success();
         }
 
 

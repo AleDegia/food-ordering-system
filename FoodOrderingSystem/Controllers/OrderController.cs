@@ -33,16 +33,24 @@ namespace FoodOrderingSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart(int foodItemId, int quantity = 1)
         {
+            OperationResult result;
             if (!User.Identity?.IsAuthenticated == true)
             {
-                var filledCart = _sessionCartService.AddItem(foodItemId, quantity);
-                SaveCart(filledCart);
+                result = _sessionCartService.AddItem(foodItemId, quantity);
             }
             else
             {
                 var user = await _userManager.GetUserAsync(User);
-                await _cartService.AddItem(user, foodItemId, quantity);
+                if (user is null)
+                    return Challenge();
+
+                result = await _cartService.AddItem(user, foodItemId, quantity);
             }
+
+            TempData[result.IsSuccess ? "Success" : "Error"] = result.IsSuccess
+                ? "Item added to your cart."
+                : result.ErrorMessage;
+
             return Redirect(Request.Headers["Referer"].ToString());
         }
 
@@ -86,7 +94,12 @@ namespace FoodOrderingSystem.Controllers
             else
             {
                 int userId = Convert.ToInt32(_userManager.GetUserId(User));
-                _cartService.UpdateQuantity(userId, foodItemId, quantity);
+                var result = _cartService.UpdateQuantity(userId, foodItemId, quantity);
+
+                if (!result.IsSuccess)
+                {
+                    TempData["Error"] = result.ErrorMessage;
+                }
             }
             return RedirectToAction("Cart");        //faccio richiesta HTTP all'action 'Cart'
         }

@@ -36,10 +36,27 @@ namespace FoodOrderingSystem.Services
             session.SetString("Cart", JsonConvert.SerializeObject(cart));
         }
 
-        public List<SessionCartItem> AddItem(int foodItemId, int quantity)
+        public OperationResult AddItem(int foodItemId, int quantity)
         {
+            var foodItem = _context.FoodItems.Find(foodItemId);
+            if (foodItem is null)
+                return OperationResult.NotFound("Food item not found.");
+
+            if (!foodItem.IsAvailable)
+                return OperationResult.OutOfStock("This item is currently unavailable.");
+
+            if (quantity <= 0)
+                return OperationResult.InvalidRequest("Quantity must be at least 1.");
+
             List<SessionCartItem> cart = GetCart();
             var existingItem = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);
+            var requestedQuantity = (existingItem?.Quantity ?? 0) + quantity;
+
+            if (foodItem.StockQuantity < requestedQuantity)
+            {
+                return OperationResult.OutOfStock(
+                    $"Only {foodItem.StockQuantity} item(s) are available.");
+            }
 
             //se prodotto c'è gia nel carrello aggiunge 1 ogni volta che lo riaggiungo al carrello
             if (existingItem != null)
@@ -49,7 +66,6 @@ namespace FoodOrderingSystem.Services
             else
             {
                 //trovo foodItem e lo aggiungo a cart sottoforma di CartItem
-                var foodItem = _context.FoodItems.Find(foodItemId);
                 cart.Add(new SessionCartItem
                 {
                     FoodItemId = foodItemId,
@@ -59,7 +75,8 @@ namespace FoodOrderingSystem.Services
                     ImageUrl = foodItem.ImageUrl
                 });
             }
-            return cart;
+            SaveCart(cart);
+            return OperationResult.Success();
         }
 
 
@@ -67,6 +84,15 @@ namespace FoodOrderingSystem.Services
         {
             if (quantity <= 0)
                 return;
+
+            var foodItem = _context.FoodItems.FirstOrDefault(f => f.Id == foodItemId);
+
+            if (foodItem is null ||
+                !foodItem.IsAvailable ||
+                foodItem.StockQuantity < quantity)
+            {
+                return;
+            }
 
             List<SessionCartItem> cart = GetCart();
             var item = cart.FirstOrDefault(c => c.FoodItemId == foodItemId);

@@ -4,7 +4,9 @@
     {
         Success,
         NotFound,
-        InvalidStatus
+        InvalidStatus,
+        InvalidRequest,
+        OutOfStock
     }
 
     public sealed record OperationResult(
@@ -21,5 +23,11 @@
 
         public static OperationResult InvalidStatus(string message) =>
             new(OperationResultCode.InvalidStatus, message);
+
+        public static OperationResult InvalidRequest(string message) =>
+            new(OperationResultCode.InvalidRequest, message);
+
+        public static OperationResult OutOfStock(string message) =>
+            new(OperationResultCode.OutOfStock, message);
     }
 }
