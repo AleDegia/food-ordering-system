@@ -167,7 +167,10 @@ namespace FoodOrderingSystem.Controllers
             var order = await _cartService.CreateOrderFromCartAsync(userId, deliveryAddress, phoneNumber);
 
             if (order == null)
+            {
+                TempData["Error"] = "Checkout could not be completed. Check your cart quantities and product availability.";
                 return RedirectToAction("Cart");
+            }
 
             HttpContext.Session.Remove("Cart");
             //_cartService.ClearCart(userId);          

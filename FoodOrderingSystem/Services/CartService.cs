@@ -96,10 +96,32 @@ namespace FoodOrderingSystem.Services
             string deliveryAddress,
             string phoneNumber)
         {
-            List<CartItem> cartItems = GetItems(userId);
+            var cartItems = await _context.CartItems
+                .Include(i => i.FoodItem)
+                .Where(i => i.Cart.UserId == userId)
+                .OrderBy(i => i.FoodItemId)
+                .ToListAsync();
 
-            if (!cartItems.Any())
+            if (!cartItems.Any() || cartItems.Any(i => i.Quantity <= 0))
                 return null;
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            foreach (var cartItem in cartItems)
+            {
+                // Check availability and decrement together using the current database value.
+                // ExecuteUpdateAsync bypasses tracking and executes immediately in this transaction.
+                var updatedRows = await _context.FoodItems
+                    .Where(f => f.Id == cartItem.FoodItemId &&
+                                f.IsAvailable &&
+                                f.StockQuantity >= cartItem.Quantity)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(
+                        f => f.StockQuantity,
+                        f => f.StockQuantity - cartItem.Quantity));
+
+                if (updatedRows == 0)
+                    return null; // Disposing the uncommitted transaction rolls back earlier decrements.
+            }
 
             var order = new Order
             {
@@ -115,29 +137,10 @@ namespace FoodOrderingSystem.Services
                 }).ToList()
             };
 
-            foreach (var cartItem in cartItems)
-            {
-                var foodItem = cartItem.FoodItem;
-
-                if (foodItem is null ||
-                    !foodItem.IsAvailable ||
-                    cartItem.Quantity <= 0 ||
-                    foodItem.StockQuantity < cartItem.Quantity)
-                {
-                    return null;                                            
-                }
-            }
-
-            // Solo dopo aver verificato tutti i prodotti:
-            foreach (var cartItem in cartItems)
-            {
-                cartItem.FoodItem.StockQuantity -= cartItem.Quantity;
-            }
-
-
             _context.Orders.Add(order);
             _context.CartItems.RemoveRange(cartItems);
-            await _context.SaveChangesAsync();                                                                       //salva anche la modifica a FoodItem, insieme all’ordine e alla rimozione dei CartItem
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return order;
         }
 

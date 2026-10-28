@@ -85,6 +85,7 @@ public class CartServiceTests
         };
 
         var food = database.Context.FoodItems.Find(1)!;
+        food.StockQuantity = 10;
 
         var cartA = new Cart { UserId = userA.Id };
         var cartB = new Cart { UserId = userB.Id };
@@ -245,6 +246,7 @@ public class CartServiceTests
         };
 
         var food = database.Context.FoodItems.Find(1)!;
+        food.StockQuantity = 10;
         database.Context.Users.Add(user);
         database.Context.SaveChanges();
 
@@ -271,6 +273,7 @@ public class CartServiceTests
         };
 
         var food = database.Context.FoodItems.Find(1)!;
+        food.StockQuantity = 10;
         database.Context.Users.Add(user);
         database.Context.SaveChanges();
 
@@ -305,6 +308,7 @@ public class CartServiceTests
         };
 
         var food = database.Context.FoodItems.Find(1)!;
+        food.StockQuantity = 10;
         var cartA = new Cart { UserId = userA.Id };
         var cartB = new Cart { UserId = userB.Id };
 
