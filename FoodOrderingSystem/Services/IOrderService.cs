@@ -10,7 +10,7 @@ namespace FoodOrderingSystem.Services
         OperationResult AdvanceStatus(int orderId);
         OperationResult UpdateOrderStatus(int orderId, string status);
         OperationResult CancelOrder(int orderId);
-        OperationResult CancelUserOrder(int orderId, int userId);
+        Task<OperationResult> CancelUserOrder(int orderId, int userId);
         List<Order> GetFilteredOrders(string status, string searchString, DateTime? fromDate, DateTime? toDate, string sortOrder);
         Order GetOrderDetails(int id);
         Order GetUserOrderDetails(int orderId, int userId);

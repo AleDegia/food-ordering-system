@@ -230,7 +230,9 @@ public class OrderService : IOrderService
 
     public OperationResult CancelOrder(int orderId)
     {
-        var order = _context.Orders.Find(orderId);
+        var order = _context.Orders
+            .Include(o => o.OrderItems)
+            .FirstOrDefault(o => o.Id == orderId);
 
         if (order is null)
             return OperationResult.NotFound("Order not found.");
@@ -239,15 +241,26 @@ public class OrderService : IOrderService
             return OperationResult.InvalidStatus(
                 $"An order with status {order.Status} cannot be cancelled.");
 
+        foreach (var item in order.OrderItems)
+        {
+            var foodItem = _context.FoodItems.Find(item.FoodItemId);
+            if (foodItem != null)
+            {
+                foodItem.StockQuantity += item.Quantity;
+            }
+        }
+
         order.Status = "Cancelled";
         _context.SaveChanges();
 
         return OperationResult.Success();
     }
 
-    public OperationResult CancelUserOrder(int orderId, int userId)
+    public async Task<OperationResult> CancelUserOrder(int orderId, int userId)
     {
+        
         var order = _context.Orders
+            .Include(o => o.OrderItems)
             .FirstOrDefault(o => o.Id == orderId && o.UserId == userId);
 
         if (order is null)
@@ -258,9 +271,30 @@ public class OrderService : IOrderService
             return OperationResult.InvalidStatus(
                 "Order cannot be cancelled at this stage.");
         }
+        
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
-        order.Status = "Cancelled";
-        _context.SaveChanges();
+        var updatedRows = await _context.Orders.Where(o => o.Id == orderId && o.UserId == userId && (o.Status == "Pending" || o.Status == "Confirmed"))
+            .ExecuteUpdateAsync(setters => setters.SetProperty(o => o.Status, "Cancelled")
+        );
+
+        if (updatedRows == 0)
+        {
+            return OperationResult.InvalidStatus(
+                "Order cannot be cancelled at this stage.");
+        }
+
+        foreach (var item in order.OrderItems)
+        {
+            _context.FoodItems.Where(f => f.Id == item.FoodItemId)
+                .ExecuteUpdate(setters => setters.SetProperty(
+                        f => f.StockQuantity,
+                        f => f.StockQuantity + item.Quantity));
+        }
+
+        //order.Status = "Cancelled";
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return OperationResult.Success();
     }

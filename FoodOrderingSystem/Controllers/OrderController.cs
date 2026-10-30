@@ -240,7 +240,7 @@ namespace FoodOrderingSystem.Controllers
             if (user is null)
                 return RedirectToAction("Login", "Account");
 
-            var result = _orderService.CancelUserOrder(orderId, user.Id);
+            var result = await _orderService.CancelUserOrder(orderId, user.Id);
 
             if (result.Code == OperationResultCode.NotFound)
                 return NotFound();
